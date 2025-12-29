@@ -2,7 +2,7 @@
 *.pyc
 __pycache__/
 db.sqlite3
-
+.venv/
 
 # Ignore large model weights just in case
 *.bin
