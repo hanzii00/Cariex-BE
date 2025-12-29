@@ -1,0 +1,11 @@
+.env
+*.pyc
+__pycache__/
+db.sqlite3
+
+
+# Ignore large model weights just in case
+*.bin
+*.pt
+*.safetensors
+*.onnx
