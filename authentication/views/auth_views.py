@@ -7,8 +7,8 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMultiAlternatives
 from django.http import HttpResponse
 from django.contrib.auth import authenticate
-from .models import User
-from .serializers import RegisterSerializer, UserSerializer
+from ..models import User
+from ..serializers import RegisterSerializer, UserSerializer
 
 
 @api_view(['POST'])
@@ -335,7 +335,7 @@ def login(request):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])  # Changed from IsAuthenticated to AllowAny
+@permission_classes([AllowAny])
 def logout(request):
     """
     Logout endpoint that blacklists the refresh token.

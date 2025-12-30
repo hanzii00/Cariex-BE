@@ -9,4 +9,6 @@ urlpatterns = [
     path('verify/<uuid:token>/', views.verify_email, name='verify_email'),
     path('profile/', views.profile, name='profile'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('password-reset/', views.password_reset_request, name='password_reset_request'),
+    path('password-reset/<uuid:token>/', views.password_reset_verify, name='password_reset_verify'),
 ]
