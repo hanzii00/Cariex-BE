@@ -7,8 +7,8 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMultiAlternatives
 from django.http import HttpResponse
 from django.contrib.auth import authenticate
-from .models import User
-from .serializers import RegisterSerializer, UserSerializer
+from ..models import User
+from ..serializers import RegisterSerializer, UserSerializer
 
 
 @api_view(['POST'])
@@ -335,7 +335,7 @@ def login(request):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])  # Changed from IsAuthenticated to AllowAny
+@permission_classes([AllowAny])
 def logout(request):
     """
     Logout endpoint that blacklists the refresh token.
@@ -365,8 +365,34 @@ def logout(request):
         )
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PUT', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def profile(request):
+    """
+    GET: Retrieve user profile
+    PUT/PATCH: Update user profile
+    """
     user = request.user
-    return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+    
+    if request.method == 'GET':
+        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+    
+    elif request.method in ['PUT', 'PATCH']:
+        # Import the serializer (add to imports at top of file)
+        from ..serializers import UserUpdateSerializer
+        
+        serializer = UserUpdateSerializer(
+            user, 
+            data=request.data, 
+            partial=True,  # Allow partial updates
+            context={'request': request}
+        )
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                'message': 'Profile updated successfully.',
+                'user': UserSerializer(user).data
+            }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
