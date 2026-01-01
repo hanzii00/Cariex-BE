@@ -33,6 +33,7 @@ def upload_image(request):
 
 def preprocess_image(request, diagnosis_id):
     """F5: Preprocessing Engine"""
+    # Allow both GET and POST for easier testing
     try:
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
         diagnosis.status = 'preprocessing'
@@ -41,6 +42,13 @@ def preprocess_image(request, diagnosis_id):
         # Read image
         image_path = diagnosis.image.path
         image = cv2.imread(image_path)
+        
+        if image is None:
+            return JsonResponse({
+                'success': False, 
+                'error': f'Could not read image at {image_path}'
+            }, status=500)
+        
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
         # Preprocess
@@ -57,8 +65,19 @@ def preprocess_image(request, diagnosis_id):
             'next_stage': 'detection'
         })
         
+    except DiagnosisResult.DoesNotExist:
+        return JsonResponse({
+            'success': False, 
+            'error': f'Diagnosis with id {diagnosis_id} not found'
+        }, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        import traceback
+        print(f"Error in preprocess: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False, 
+            'error': str(e)
+        }, status=500)
 
 def detect_caries(request, diagnosis_id):
     """F6: Caries Detection AI"""
@@ -70,32 +89,60 @@ def detect_caries(request, diagnosis_id):
         # Read and preprocess image
         image_path = diagnosis.image.path
         image = cv2.imread(image_path)
+        
+        if image is None:
+            return JsonResponse({
+                'success': False, 
+                'error': f'Could not read image at {image_path}'
+            }, status=500)
+        
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         preprocessed = model_loader.preprocess_image(image_rgb)
         
         # Run detection
         predictions = model_loader.predict(preprocessed)
         
-        # Generate bounding boxes (if your model supports object detection)
-        # This depends on your model architecture
-        bounding_boxes = generate_bounding_boxes(predictions, image.shape)
+        # Classify severity (this now handles segmentation output)
+        severity_result = model_loader.classify_severity(predictions)
+        
+        # Generate bounding boxes from segmentation mask
+        bounding_boxes = []
+        if 'segmentation_mask' in severity_result:
+            bounding_boxes = model_loader.generate_bounding_boxes(
+                severity_result['segmentation_mask'],
+                threshold=0.5,
+                min_area=50  # Minimum area in pixels
+            )
+        
+        has_caries = severity_result['severity'].lower() not in ['normal', 'class_0']
         
         diagnosis.lesion_boxes = bounding_boxes
-        diagnosis.has_caries = len(bounding_boxes) > 0
+        diagnosis.has_caries = has_caries
         diagnosis.status = 'detected'
         diagnosis.save()
         
         return JsonResponse({
             'success': True,
             'diagnosis_id': diagnosis_id,
-            'has_caries': diagnosis.has_caries,
+            'has_caries': has_caries,
             'bounding_boxes': bounding_boxes,
+            'affected_percentage': severity_result.get('affected_percentage', 0),
             'next_stage': 'classification'
         })
         
+    except DiagnosisResult.DoesNotExist:
+        return JsonResponse({
+            'success': False, 
+            'error': f'Diagnosis with id {diagnosis_id} not found'
+        }, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
+        import traceback
+        print(f"Error in detect_caries: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False, 
+            'error': str(e)
+        }, status=500)
 def classify_severity(request, diagnosis_id):
     """F6: Severity Classification AI"""
     try:
@@ -106,6 +153,13 @@ def classify_severity(request, diagnosis_id):
         # Read and preprocess image
         image_path = diagnosis.image.path
         image = cv2.imread(image_path)
+        
+        if image is None:
+            return JsonResponse({
+                'success': False, 
+                'error': f'Could not read image at {image_path}'
+            }, status=500)
+        
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         preprocessed = model_loader.preprocess_image(image_rgb)
         
@@ -114,6 +168,16 @@ def classify_severity(request, diagnosis_id):
         
         # Classify severity
         severity_result = model_loader.classify_severity(predictions)
+        
+        # Remove segmentation_mask from result (too large for JSON)
+        if 'segmentation_mask' in severity_result:
+            del severity_result['segmentation_mask']
+        
+        # Convert all numpy types to Python native types for JSON serialization
+        severity_result = {
+            key: float(value) if isinstance(value, (np.floating, np.integer)) else value
+            for key, value in severity_result.items()
+        }
         
         diagnosis.severity = severity_result['severity']
         diagnosis.confidence_score = severity_result['confidence']
@@ -124,12 +188,26 @@ def classify_severity(request, diagnosis_id):
             'success': True,
             'diagnosis_id': diagnosis_id,
             'severity': severity_result['severity'],
-            'confidence': severity_result['confidence'],
-            'probabilities': severity_result['all_probabilities']
+            'confidence': float(severity_result['confidence']),
+            'probabilities': severity_result.get('all_probabilities', []),
+            'affected_percentage': float(severity_result.get('affected_percentage', 0)),
+            'mean_probability': float(severity_result.get('mean_probability', 0)),
+            'max_probability': float(severity_result.get('max_probability', 0))
         })
         
+    except DiagnosisResult.DoesNotExist:
+        return JsonResponse({
+            'success': False, 
+            'error': f'Diagnosis with id {diagnosis_id} not found'
+        }, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        import traceback
+        print(f"Error in classify_severity: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False, 
+            'error': str(e)
+        }, status=500)
 
 def show_results(request, diagnosis_id):
     """Result page with bounding boxes"""
