@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'authentication',
     'AIModel',
+    'patients',
 ]
 
 MIDDLEWARE = [
