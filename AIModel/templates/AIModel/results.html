@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diagnosis Results</title>
+    <title>Diagnosis Results - XAI Enhanced</title>
     <style>
         * {
             margin: 0;
@@ -20,7 +20,7 @@
         
         .results-container {
             background: white;
-            max-width: 900px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 40px;
             border-radius: 20px;
@@ -32,6 +32,49 @@
             margin-bottom: 30px;
             font-size: 32px;
             text-align: center;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .tab:hover {
+            color: #667eea;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .image-container {
@@ -115,6 +158,7 @@
             gap: 15px;
             justify-content: center;
             flex-wrap: wrap;
+            margin-top: 30px;
         }
         
         .btn {
@@ -124,6 +168,9 @@
             font-weight: bold;
             transition: transform 0.2s;
             display: inline-block;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
         }
         
         .btn:hover {
@@ -141,6 +188,11 @@
             border: 2px solid #667eea;
         }
         
+        .btn-xai {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        
         .status-badge {
             display: inline-block;
             padding: 8px 20px;
@@ -155,6 +207,97 @@
             color: #155724;
         }
         
+        .xai-container {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .xai-loading {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .xai-explanation {
+            margin-top: 20px;
+        }
+        
+        .xai-image {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            margin: 20px 0;
+        }
+        
+        .xai-info {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .xai-info h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .xai-info p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        
+        .xai-legend {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .legend-color {
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+        }
+        
+        .color-red {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+        }
+        
+        .color-green {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
         @media (max-width: 600px) {
             .results-grid {
                 grid-template-columns: 1fr;
@@ -162,6 +305,10 @@
             
             .results-container {
                 padding: 20px;
+            }
+            
+            .tabs {
+                overflow-x: auto;
             }
         }
     </style>
@@ -174,47 +321,103 @@
             <span class="status-badge status-completed">✓ Analysis Complete</span>
         </div>
         
-        <div class="image-container">
-            <img src="{{ image_url }}" alt="Dental Image" class="result-image">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('results')">📊 Results</button>
+            <button class="tab" onclick="switchTab('xai')">🔬 AI Explanation</button>
+            <button class="tab" onclick="switchTab('details')">ℹ️ Details</button>
         </div>
         
-        <div class="results-grid">
-            <div class="result-card severity-{{ severity|lower }}">
-                <h3>Severity Level</h3>
-                <div class="value">{{ severity|default:"N/A" }}</div>
+        <!-- Results Tab -->
+        <div id="results-tab" class="tab-content active">
+            <div class="image-container">
+                <img src="{{ image_url }}" alt="Dental Image" class="result-image">
             </div>
             
-            <div class="result-card">
-                <h3>Confidence Score</h3>
-                <div class="value">{{ confidence|floatformat:1|default:"0" }}%</div>
+            <div class="results-grid">
+                <div class="result-card severity-{{ severity|lower }}">
+                    <h3>Severity Level</h3>
+                    <div class="value">{{ severity|default:"N/A" }}</div>
+                </div>
+                
+                <div class="result-card">
+                    <h3>Confidence Score</h3>
+                    <div class="value">{{ confidence|floatformat:1|default:"0" }}%</div>
+                </div>
+                
+                <div class="result-card">
+                    <h3>Caries Detected</h3>
+                    <div class="value">{% if diagnosis.has_caries %}Yes{% else %}No{% endif %}</div>
+                </div>
             </div>
             
-            <div class="result-card">
-                <h3>Caries Detected</h3>
-                <div class="value">{% if diagnosis.has_caries %}Yes{% else %}No{% endif %}</div>
+            {% if bounding_boxes %}
+            <div class="lesions-section">
+                <h3>📍 Detected Lesions ({{ bounding_boxes|length }})</h3>
+                {% for box in bounding_boxes %}
+                <div class="lesion-item">
+                    <strong>Lesion {{ forloop.counter }}:</strong> 
+                    Position ({{ box.x }}, {{ box.y }}) - 
+                    Size: {{ box.width }}×{{ box.height }}px
+                    {% if box.confidence %}
+                    - Confidence: {{ box.confidence|floatformat:1 }}%
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- XAI Tab -->
+        <div id="xai-tab" class="tab-content">
+            <div class="xai-container">
+                <h3>🔬 Explainable AI Visualization</h3>
+                <p style="color: #666; margin-bottom: 20px;">
+                    Understanding how the AI made its diagnosis - No LLM required, pure computer vision!
+                </p>
+                
+                <div id="xai-content">
+                    <button class="btn btn-xai" onclick="loadXAIExplanation()">
+                        🎨 Generate AI Explanation
+                    </button>
+                </div>
+                
+                <div class="xai-info">
+                    <h4>📖 What is Explainable AI (XAI)?</h4>
+                    <p>
+                        XAI helps you understand <strong>why</strong> the AI made its prediction by visualizing 
+                        which areas of the tooth the model focused on during analysis.
+                    </p>
+                    
+                    <h4 style="margin-top: 20px;">🎯 Visualization Techniques Used:</h4>
+                    <ul style="color: #666; padding-left: 20px; line-height: 1.8;">
+                        <li><strong>Segmentation Heatmap:</strong> Shows probability of caries at each pixel</li>
+                        <li><strong>Grad-CAM:</strong> Highlights regions that influenced the AI's decision</li>
+                        <li><strong>Color Overlay:</strong> Red = caries, Green = healthy tissue</li>
+                        <li><strong>Binary Mask:</strong> Clear yes/no detection at 50% threshold</li>
+                    </ul>
+                </div>
             </div>
         </div>
         
-        {% if bounding_boxes %}
-        <div class="lesions-section">
-            <h3>📍 Detected Lesions ({{ bounding_boxes|length }})</h3>
-            {% for box in bounding_boxes %}
-            <div class="lesion-item">
-                <strong>Lesion {{ forloop.counter }}:</strong> 
-                Position ({{ box.x }}, {{ box.y }})
-                {% if box.confidence %}
-                - Confidence: {{ box.confidence|floatformat:1 }}%
-                {% endif %}
+        <!-- Details Tab -->
+        <div id="details-tab" class="tab-content">
+            <div class="lesions-section">
+                <h3>ℹ️ Diagnosis Information</h3>
+                <p><strong>Diagnosis ID:</strong> {{ diagnosis.id }}</p>
+                <p><strong>Upload Date:</strong> {{ diagnosis.uploaded_at|date:"F d, Y g:i A" }}</p>
+                <p><strong>Status:</strong> {{ diagnosis.status|title }}</p>
+                <p><strong>Has Caries:</strong> {% if diagnosis.has_caries %}Yes{% else %}No{% endif %}</p>
+                <p><strong>Number of Lesions:</strong> {{ num_lesions }}</p>
             </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        
-        <div class="lesions-section">
-            <h3>ℹ️ Diagnosis Information</h3>
-            <p><strong>Diagnosis ID:</strong> {{ diagnosis.id }}</p>
-            <p><strong>Upload Date:</strong> {{ diagnosis.uploaded_at|date:"F d, Y g:i A" }}</p>
-            <p><strong>Status:</strong> {{ diagnosis.status|title }}</p>
+            
+            <div class="lesions-section">
+                <h3>🔧 Technical Details</h3>
+                <p><strong>Model:</strong> Adult Teeth Segmentation (U-Net based)</p>
+                <p><strong>Input Processing:</strong> Resized and normalized to model specifications</p>
+                <p><strong>Detection Method:</strong> Pixel-wise segmentation with confidence thresholding</p>
+                <p><strong>Classification Categories:</strong> Normal, Mild, Moderate, Severe</p>
+            </div>
         </div>
         
         <div class="action-buttons">
@@ -224,7 +427,159 @@
             <button onclick="window.print()" class="btn btn-secondary">
                 🖨️ Print Results
             </button>
+            <button onclick="downloadReport()" class="btn btn-secondary">
+                💾 Download Report
+            </button>
         </div>
     </div>
+
+    <script>
+        const diagnosisId = parseInt('{{ diagnosis.id }}');
+        let xaiLoaded = false;
+
+        function switchTab(tabName) {
+            // Remove active class from all tabs and contents
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to selected tab and content
+            event.target.classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+
+        async function loadXAIExplanation() {
+            const xaiContent = document.getElementById('xai-content');
+            
+            xaiContent.innerHTML = `
+                <div class="xai-loading">
+                    <div class="loader"></div>
+                    <p>Generating AI explanation... This may take a few seconds.</p>
+                    <p style="color: #999; font-size: 14px; margin-top: 10px;">
+                        Creating Grad-CAM, heatmaps, and overlays...
+                    </p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`/api/ai/explain/${diagnosisId}/`);
+                const data = await response.json();
+
+                if (data.success) {
+                    xaiLoaded = true;
+                    xaiContent.innerHTML = `
+                        <div class="xai-explanation">
+                            <img src="${data.explanation_url}" alt="XAI Explanation" class="xai-image">
+                            
+                            <div class="xai-info">
+                                <h4>📊 Interpretation Guide</h4>
+                                <div class="xai-legend">
+                                    <div class="legend-item">
+                                        <div class="legend-color color-red"></div>
+                                        <span>Red areas = Suspected caries</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <div class="legend-color color-green"></div>
+                                        <span>Green areas = Healthy tissue</span>
+                                    </div>
+                                </div>
+                                <p style="margin-top: 15px;">
+                                    <strong>Brighter colors</strong> indicate higher confidence in the prediction.
+                                </p>
+                                
+                                <h4 style="margin-top: 20px;">🔍 Analysis Summary</h4>
+                                <p><strong>Severity:</strong> ${data.severity}</p>
+                                <p><strong>Confidence:</strong> ${data.confidence.toFixed(1)}%</p>
+                                <p><strong>Affected Area:</strong> ${data.affected_percentage.toFixed(2)}%</p>
+                                
+                                <h4 style="margin-top: 20px;">🎨 Techniques Applied</h4>
+                                <ul style="padding-left: 20px; color: #666;">
+                                    ${data.techniques_used.map(t => `<li>${t}</li>`).join('')}
+                                </ul>
+                            </div>
+                            
+                            <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                                <button class="btn btn-secondary" onclick="loadQuickOverlay()">
+                                    🎨 Quick Overlay View
+                                </button>
+                                <button class="btn btn-secondary" onclick="downloadXAI()">
+                                    💾 Download Explanation
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(data.error || 'Failed to generate explanation');
+                }
+            } catch (error) {
+                xaiContent.innerHTML = `
+                    <div class="error-message">
+                        <strong>⚠️ Error:</strong> ${error.message}
+                        <p style="margin-top: 10px;">
+                            XAI features require matplotlib. Install it with: 
+                            <code style="background: #fff; padding: 5px; border-radius: 5px;">pip install matplotlib</code>
+                        </p>
+                        <button class="btn btn-primary" onclick="loadXAIExplanation()" style="margin-top: 15px;">
+                            🔄 Try Again
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadQuickOverlay() {
+            const xaiContent = document.getElementById('xai-content');
+            
+            xaiContent.innerHTML = `
+                <div class="xai-loading">
+                    <div class="loader"></div>
+                    <p>Generating quick overlay...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`/api/ai/explain/quick/${diagnosisId}/`);
+                const data = await response.json();
+
+                if (data.success) {
+                    xaiContent.innerHTML = `
+                        <div class="xai-explanation">
+                            <h4>🎨 Quick Overlay View</h4>
+                            <p style="color: #666; margin-bottom: 20px;">
+                                Simplified visualization: ${data.description}
+                            </p>
+                            <img src="${data.overlay_url}" alt="Quick XAI Overlay" class="xai-image">
+                            
+                            <div style="margin-top: 20px;">
+                                <button class="btn btn-primary" onclick="loadXAIExplanation()">
+                                    ← Back to Full Explanation
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                xaiContent.innerHTML = `
+                    <div class="error-message">
+                        <strong>⚠️ Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function downloadXAI() {
+            // Create a link to download the XAI explanation image
+            const link = document.createElement('a');
+            link.href = `/media/dental_images/xai_explanation_${diagnosisId}.png`;
+            link.download = `xai_explanation_${diagnosisId}.png`;
+            link.click();
+        }
+
+        function downloadReport() {
+            // You can implement a PDF generation endpoint or just save as image
+            window.print();
+        }
+    </script>
 </body>
 </html>
