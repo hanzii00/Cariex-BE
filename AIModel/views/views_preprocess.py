@@ -7,18 +7,10 @@ from ..model_loader import model_loader
 
 
 def preprocess_image(request, diagnosis_id):
-    """
-    F5: Preprocessing Engine
-    Preprocesses uploaded image for model input
-    Supports both GET and POST for testing
-    """
     try:
-        # Fetch diagnosis record
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
         diagnosis.status = 'preprocessing'
         diagnosis.save()
-        
-        # Read image from storage
         image_path = diagnosis.image.path
         image = cv2.imread(image_path)
         
@@ -28,13 +20,8 @@ def preprocess_image(request, diagnosis_id):
                 'error': f'Could not read image at {image_path}'
             }, status=500)
         
-        # Convert BGR to RGB
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        # Preprocess image using model loader
         preprocessed = model_loader.preprocess_image(image_rgb)
-        
-        # Update status
         diagnosis.status = 'preprocessed'
         diagnosis.save()
         

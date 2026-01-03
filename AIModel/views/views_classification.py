@@ -8,18 +8,11 @@ from ..model_loader import model_loader
 
 
 def classify_severity(request, diagnosis_id):
-    """
-    F6: Severity Classification AI
-    Classifies severity level of detected caries
-    Returns: Normal, Mild, Moderate, or Severe
-    """
     try:
-        # Fetch diagnosis record
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
         diagnosis.status = 'classifying'
         diagnosis.save()
         
-        # Read and preprocess image
         image_path = diagnosis.image.path
         image = cv2.imread(image_path)
         
@@ -29,27 +22,21 @@ def classify_severity(request, diagnosis_id):
                 'error': f'Could not read image at {image_path}'
             }, status=500)
         
-        # Convert to RGB and preprocess
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         preprocessed = model_loader.preprocess_image(image_rgb)
         
-        # Run AI prediction
         predictions = model_loader.predict(preprocessed)
         
-        # Classify severity
         severity_result = model_loader.classify_severity(predictions)
         
-        # Remove segmentation_mask from result (too large for JSON)
         if 'segmentation_mask' in severity_result:
             del severity_result['segmentation_mask']
         
-        # Convert numpy types to native Python types for JSON serialization
         severity_result = {
             key: _convert_to_native_type(value)
             for key, value in severity_result.items()
         }
         
-        # Save to database
         diagnosis.severity = severity_result['severity']
         diagnosis.confidence_score = severity_result['confidence']
         diagnosis.status = 'completed'
@@ -82,7 +69,6 @@ def classify_severity(request, diagnosis_id):
 
 
 def _convert_to_native_type(value):
-    """Helper function to convert numpy types to Python native types"""
     if isinstance(value, (np.floating, np.integer)):
         return float(value)
     elif isinstance(value, np.ndarray):
