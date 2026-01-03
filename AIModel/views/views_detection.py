@@ -7,17 +7,11 @@ from ..model_loader import model_loader
 
 
 def detect_caries(request, diagnosis_id):
-    """
-    F6: Caries Detection AI
-    Runs AI model to detect caries and generate bounding boxes
-    """
     try:
-        # Fetch diagnosis record
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
         diagnosis.status = 'detecting'
         diagnosis.save()
         
-        # Read and preprocess image
         image_path = diagnosis.image.path
         image = cv2.imread(image_path)
         
@@ -27,29 +21,20 @@ def detect_caries(request, diagnosis_id):
                 'error': f'Could not read image at {image_path}'
             }, status=500)
         
-        # Convert to RGB and preprocess
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         preprocessed = model_loader.preprocess_image(image_rgb)
-        
-        # Run AI prediction
-        predictions = model_loader.predict(preprocessed)
-        
-        # Classify severity (handles segmentation output)
+        predictions = model_loader.predict(preprocessed)   
         severity_result = model_loader.classify_severity(predictions)
         
-        # Generate bounding boxes from segmentation mask
         bounding_boxes = []
         if 'segmentation_mask' in severity_result:
             bounding_boxes = model_loader.generate_bounding_boxes(
                 severity_result['segmentation_mask'],
                 threshold=0.5,
-                min_area=50  # Minimum area in pixels
+                min_area=50  
             )
         
-        # Determine if caries detected
         has_caries = severity_result['severity'].lower() not in ['normal', 'class_0']
-        
-        # Save results
         diagnosis.lesion_boxes = bounding_boxes
         diagnosis.has_caries = has_caries
         diagnosis.status = 'detected'

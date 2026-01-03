@@ -1,34 +1,26 @@
-from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
-
+from django.shortcuts import get_object_or_404
 from ..models import DiagnosisResult
 
 
 def show_results(request, diagnosis_id):
-    """
-    Display diagnosis results with visualizations
-    Shows severity, confidence, and bounding boxes
-    """
     diagnosis = get_object_or_404(DiagnosisResult, id=diagnosis_id)
     
-    context = {
-        'diagnosis': diagnosis,
-        'severity': diagnosis.severity,
-        'confidence': diagnosis.confidence_score,
-        'bounding_boxes': diagnosis.lesion_boxes,
+    return JsonResponse({
+        'success': True,
+        'diagnosis_id': diagnosis.id,
         'image_url': diagnosis.image.url,
         'has_caries': diagnosis.has_caries,
-        'num_lesions': len(diagnosis.lesion_boxes) if diagnosis.lesion_boxes else 0
-    }
-    
-    return render(request, 'AIModel/results.html', context)
+        'severity': diagnosis.severity,
+        'confidence_score': diagnosis.confidence_score,
+        'bounding_boxes': diagnosis.lesion_boxes,
+        'num_lesions': len(diagnosis.lesion_boxes) if diagnosis.lesion_boxes else 0,
+        'status': diagnosis.status,
+        'uploaded_at': diagnosis.uploaded_at.isoformat(),
+    })
 
 
 def get_diagnosis_json(request, diagnosis_id):
-    """
-    API endpoint to get diagnosis results as JSON
-    Useful for AJAX requests or mobile apps
-    """
     try:
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
         
