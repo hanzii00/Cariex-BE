@@ -112,9 +112,10 @@ class XAIVisualizer:
         else:
             original_image_uint8 = original_image.copy()
         
-        # Check if any caries detected
+        # Check if any caries detected (more conservative)
         max_prob = np.max(mask_resized)
-        has_detection = max_prob > 0.1  # Threshold for meaningful detection
+        mean_prob = np.mean(mask_resized)
+        has_detection = (max_prob > 0.6) and (mean_prob > 0.01)
         
         if not has_detection:
             # No caries detected - return original image without overlay
@@ -163,8 +164,9 @@ class XAIVisualizer:
         severity = severity_result.get('severity', 'N/A')
         confidence = severity_result.get('confidence', 0)
         
-        # Determine if caries detected
-        has_caries = affected_pct > 0.1 or max_prob > 0.1
+        # Determine if caries detected (more conservative threshold)
+        # Require BOTH some affected area AND reasonable max probability
+        has_caries = (affected_pct > 0.5) and (max_prob > 0.6)
         
         # 1. Original Image
         axes[0, 0].imshow(original_image)
