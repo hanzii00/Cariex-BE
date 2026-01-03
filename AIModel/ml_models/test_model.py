@@ -2,7 +2,6 @@ import tensorflow as tf
 import numpy as np
 from pathlib import Path
 
-# Get the correct path
 model_path = Path(__file__).parent / 'adult_teeth.h5'
 
 print(f"Looking for model at: {model_path}")
@@ -10,7 +9,6 @@ print(f"Model exists: {model_path.exists()}")
 
 if model_path.exists():
     try:
-        # Try loading without compilation first
         print("\nAttempting to load model without compilation...")
         model = tf.keras.models.load_model(str(model_path), compile=False)
         
@@ -23,7 +21,6 @@ if model_path.exists():
         print("\nModel summary:")
         model.summary()
         
-        # Test with dummy data based on actual input shape
         input_shape = model.input_shape[1:]  # Remove batch dimension
         print(f"\nCreating test input with shape: (1, {', '.join(map(str, input_shape))})")
         dummy_input = np.random.rand(1, *input_shape).astype(np.float32)
