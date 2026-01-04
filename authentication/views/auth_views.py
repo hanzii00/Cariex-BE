@@ -365,34 +365,35 @@ def logout(request):
         )
 
 
-@api_view(['GET', 'PUT', 'PATCH'])
-@permission_classes([IsAuthenticated])
-def profile(request):
-    """
-    GET: Retrieve user profile
-    PUT/PATCH: Update user profile
-    """
-    user = request.user
+# @api_view(['GET', 'PUT', 'PATCH'])
+# @permission_classes([IsAuthenticated])
+# def profile(request):
+#     """
+#     GET: Retrieve user profile
+#     PUT/PATCH: Update user profile
+#     """
+#     user = request.user
     
-    if request.method == 'GET':
-        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+#     if request.method == 'GET':
+#         return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
     
-    elif request.method in ['PUT', 'PATCH']:
-        # Import the serializer (add to imports at top of file)
-        from ..serializers import UserUpdateSerializer
+#     elif request.method in ['PUT', 'PATCH']:
+#         # Import the serializer (add to imports at top of file)
+#         from ..serializers import UserUpdateSerializer
         
-        serializer = UserUpdateSerializer(
-            user, 
-            data=request.data, 
-            partial=True,  # Allow partial updates
-            context={'request': request}
-        )
+#         serializer = UserUpdateSerializer(
+#             user, 
+#             data=request.data, 
+#             partial=True,  # Allow partial updates
+#             context={'request': request}
+#         )
         
-        if serializer.is_valid():
-            serializer.save()
-            return Response({
-                'message': 'Profile updated successfully.',
-                'user': UserSerializer(user).data
-            }, status=status.HTTP_200_OK)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response({
+#                 'message': 'Profile updated successfully.',
+#                 'user': UserSerializer(user).data
+#             }, status=status.HTTP_200_OK)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
