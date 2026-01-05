@@ -6,7 +6,7 @@ from . import views
 app_name = 'feedback'
 
 urlpatterns = [
-    # Feedback CRUD
+        # Feedback CRUD
     path('submit/<int:diagnosis_id>/', views.submit_feedback, name='submit'),
     path('get/<int:diagnosis_id>/', views.get_feedback, name='get'),
     path('update/<int:feedback_id>/', views.update_feedback, name='update'),
