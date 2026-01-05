@@ -11,8 +11,8 @@ from .views_detection import detect_caries
 from .views_classification import classify_severity
 from .views_results import show_results, get_diagnosis_json
 from .views_xai import explain_diagnosis, quick_xai_overlay, get_gradcam
+from .views_diagnoses import get_all_diagnoses, get_single_diagnosis, delete_diagnosis
 
-# Define what's available when someone does 'from views import *'
 __all__ = [
     'upload_image',
     'preprocess_image',
@@ -23,4 +23,7 @@ __all__ = [
     'explain_diagnosis',
     'quick_xai_overlay',
     'get_gradcam',
+    'get_all_diagnoses',
+    'get_single_diagnosis',
+    'delete_diagnosis',
 ]
