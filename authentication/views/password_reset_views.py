@@ -26,9 +26,10 @@ def password_reset_request(request):
             # Generate reset token
             reset_token = user.create_reset_token()
             
-            # Build reset URL
-            current_site = get_current_site(request)
-            reset_url = f"http://{current_site.domain}/api/auth/password-reset/{reset_token}/"
+            # Build reset URL using request instead of get_current_site
+            protocol = 'https' if request.is_secure() else 'http'
+            host = request.get_host()
+            reset_url = f"{protocol}://{host}/api/auth/password-reset/{reset_token}/"
             
             # HTML email content
             html_content = f"""
