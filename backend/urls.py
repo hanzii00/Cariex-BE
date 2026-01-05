@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/dashboard/', include('dashboard.urls')),
     path('api/ai/', include('AIModel.urls')),
     path("api/accounts/", include("accounts.urls")),
+    path('api/feedback/', include('dentist_feedback.urls')),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
