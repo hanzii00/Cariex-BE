@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from accounts.models import DentistProfile
 
 from .serializers import (
     UserProfileSerializer,
@@ -16,7 +17,7 @@ def profile(request):
     """
     Get / Update user profile
     """
-    profile = request.user.profile
+    profile, created = DentistProfile.objects.get_or_create(user=request.user)  
 
     if request.method == "GET":
         serializer = UserProfileSerializer(profile)
