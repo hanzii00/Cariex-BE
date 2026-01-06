@@ -105,10 +105,11 @@ def explain_diagnosis(request, diagnosis_id):
             fig.savefig(buf, format='png', dpi=150, bbox_inches='tight')
             buf.seek(0)
             # Use upsert so repeated calls do not error with 409 Duplicate
+            # Supabase expects header values as strings, not bools
             supabase.storage.from_("images").upload(
                 supa_path,
                 buf.getvalue(),
-                {"content-type": "image/png", "upsert": True},
+                {"content-type": "image/png", "upsert": "true"},
             )
             explanation_url = supabase.storage.from_("images").get_public_url(supa_path)
         except Exception as e:
@@ -195,10 +196,11 @@ def quick_xai_overlay(request, diagnosis_id):
             if not success:
                 raise RuntimeError('Failed to encode quick overlay PNG')
             # Use upsert so repeated calls do not error with 409 Duplicate
+            # Supabase expects header values as strings, not bools
             supabase.storage.from_("images").upload(
                 supa_path,
                 png_arr.tobytes(),
-                {"content-type": "image/png", "upsert": True},
+                {"content-type": "image/png", "upsert": "true"},
             )
             overlay_url = supabase.storage.from_("images").get_public_url(supa_path)
         except Exception as e:
@@ -259,10 +261,11 @@ def get_gradcam(request, diagnosis_id):
             if not success:
                 raise RuntimeError('Failed to encode Grad-CAM PNG')
             # Use upsert so repeated calls do not error with 409 Duplicate
+            # Supabase expects header values as strings, not bools
             supabase.storage.from_("images").upload(
                 supa_path,
                 png_arr.tobytes(),
-                {"content-type": "image/png", "upsert": True},
+                {"content-type": "image/png", "upsert": "true"},
             )
             gradcam_url = supabase.storage.from_("images").get_public_url(supa_path)
         except Exception as e:
