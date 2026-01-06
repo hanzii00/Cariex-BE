@@ -99,21 +99,26 @@ def explain_diagnosis(request, diagnosis_id):
         xai.save_explanation(fig, output_path)
 
         # Also upload to Supabase so the XAI image is stored with other images
+        supa_path = f"xai/{diagnosis_id}/xai_explanation_{diagnosis_id}.png"
         try:
             buf = io.BytesIO()
             fig.savefig(buf, format='png', dpi=150, bbox_inches='tight')
             buf.seek(0)
-            supa_path = f"xai/{diagnosis_id}/xai_explanation_{diagnosis_id}.png"
+            # Use upsert so repeated calls do not error with 409 Duplicate
             supabase.storage.from_("images").upload(
                 supa_path,
                 buf.getvalue(),
-                {"content-type": "image/png"},
+                {"content-type": "image/png", "upsert": True},
             )
             explanation_url = supabase.storage.from_("images").get_public_url(supa_path)
         except Exception as e:
-            # Fallback to local MEDIA_URL if Supabase upload fails
+            # If upload fails (e.g. duplicate), try to reuse any existing Supabase file
             print("XAI Supabase upload error (explanation):", e)
-            explanation_url = f"{settings.MEDIA_URL}dental_images/{output_filename}"
+            try:
+                explanation_url = supabase.storage.from_("images").get_public_url(supa_path)
+            except Exception:
+                # Fallback to local MEDIA_URL if Supabase is unavailable
+                explanation_url = f"{settings.MEDIA_URL}dental_images/{output_filename}"
 
         plt.close(fig)
 
@@ -184,20 +189,24 @@ def quick_xai_overlay(request, diagnosis_id):
         cv2.imwrite(str(output_path), cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR))
 
         # Upload quick overlay PNG to Supabase
+        supa_path = f"xai/{diagnosis_id}/xai_quick_{diagnosis_id}.png"
         try:
             success, png_arr = cv2.imencode('.png', cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR))
             if not success:
                 raise RuntimeError('Failed to encode quick overlay PNG')
-            supa_path = f"xai/{diagnosis_id}/xai_quick_{diagnosis_id}.png"
+            # Use upsert so repeated calls do not error with 409 Duplicate
             supabase.storage.from_("images").upload(
                 supa_path,
                 png_arr.tobytes(),
-                {"content-type": "image/png"},
+                {"content-type": "image/png", "upsert": True},
             )
             overlay_url = supabase.storage.from_("images").get_public_url(supa_path)
         except Exception as e:
             print("XAI Supabase upload error (quick overlay):", e)
-            overlay_url = f"{settings.MEDIA_URL}dental_images/{output_filename}"
+            try:
+                overlay_url = supabase.storage.from_("images").get_public_url(supa_path)
+            except Exception:
+                overlay_url = f"{settings.MEDIA_URL}dental_images/{output_filename}"
         description = (
             f'Red areas indicate suspected caries ({affected_pct:.2f}% affected)'
             if has_caries
@@ -244,20 +253,24 @@ def get_gradcam(request, diagnosis_id):
         cv2.imwrite(str(output_path), cv2.cvtColor(gradcam_overlay, cv2.COLOR_RGB2BGR))
 
         # Upload Grad-CAM overlay PNG to Supabase
+        supa_path = f"xai/{diagnosis_id}/gradcam_{diagnosis_id}.png"
         try:
             success, png_arr = cv2.imencode('.png', cv2.cvtColor(gradcam_overlay, cv2.COLOR_RGB2BGR))
             if not success:
                 raise RuntimeError('Failed to encode Grad-CAM PNG')
-            supa_path = f"xai/{diagnosis_id}/gradcam_{diagnosis_id}.png"
+            # Use upsert so repeated calls do not error with 409 Duplicate
             supabase.storage.from_("images").upload(
                 supa_path,
                 png_arr.tobytes(),
-                {"content-type": "image/png"},
+                {"content-type": "image/png", "upsert": True},
             )
             gradcam_url = supabase.storage.from_("images").get_public_url(supa_path)
         except Exception as e:
             print("XAI Supabase upload error (gradcam):", e)
-            gradcam_url = f"{settings.MEDIA_URL}dental_images/{output_filename}"
+            try:
+                gradcam_url = supabase.storage.from_("images").get_public_url(supa_path)
+            except Exception:
+                gradcam_url = f"{settings.MEDIA_URL}dental_images/{output_filename}"
         description = (
             'Heatmap showing which regions influenced the caries detection (brighter = more influential)'
             if has_caries
