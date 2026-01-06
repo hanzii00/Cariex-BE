@@ -4,10 +4,12 @@ import traceback
 
 from ..models import DiagnosisResult
 from ..model_loader import model_loader
+import time
 
 
 def preprocess_image(request, diagnosis_id):
     try:
+        start = time.time()
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
         diagnosis.status = 'preprocessing'
         diagnosis.save()
@@ -21,9 +23,13 @@ def preprocess_image(request, diagnosis_id):
             }, status=500)
         
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        t0 = time.time()
         preprocessed = model_loader.preprocess_image(image_rgb)
+        t1 = time.time()
         diagnosis.status = 'preprocessed'
         diagnosis.save()
+        total = time.time() - start
+        print(f"Preprocess: read+prep took {t1 - t0:.3f}s, total {total:.3f}s for diagnosis {diagnosis_id}")
         
         return JsonResponse({
             'success': True,
