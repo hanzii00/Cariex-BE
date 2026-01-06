@@ -1,30 +1,61 @@
 from django.db import models
 from django.conf import settings
+from dashboard.models import Patient
 
 class DiagnosisResult(models.Model):
-    # Change this line - use settings.AUTH_USER_MODEL instead of User
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+    ]
+
+    # Dentist / uploader
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE, 
-        null=True, 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
         blank=True
     )
-    image = models.ImageField(upload_to='dental_images/')
-    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    # PATIENT LINK
+    patient = models.ForeignKey(
+        Patient,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    # Supabase image URL
+    image_url = models.URLField(
+        blank=True,
+        null=True
+    )
     
-    # Detection results
+    # Local image field (optional, for local storage)
+    image = models.ImageField(upload_to='dental_images/', blank=True, null=True)
+    
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    # AI results
     has_caries = models.BooleanField(default=False)
     severity = models.CharField(max_length=50, blank=True)
     confidence_score = models.FloatField(null=True)
-    
-    # Bounding boxes (stored as JSON)
+
     lesion_boxes = models.JSONField(null=True, blank=True)
-    
-    # Processing status
-    status = models.CharField(max_length=20, default='pending')  # pending, processing, completed
-    
+
+    # Processing state
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+
+    # Dentist validation
+    verified_by_dentist = models.BooleanField(default=False)
+    dentist_notes = models.TextField(blank=True)
+
     class Meta:
         ordering = ['-uploaded_at']
-    
+
     def __str__(self):
-        return f"Diagnosis {self.id} - {self.severity}"
+        return f"Diagnosis {self.id} - {self.patient.full_name}"

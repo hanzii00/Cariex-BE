@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     'authentication',
     'AIModel',
     'dashboard',
+    'accounts',
+    'dentist_feedback',
 ]
 
 MIDDLEWARE = [
