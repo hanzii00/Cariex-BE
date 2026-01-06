@@ -3,6 +3,11 @@ from django.conf import settings
 import cv2
 import traceback
 from pathlib import Path
+import urllib.request
+import numpy as np
+import os
+import io
+import uuid
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -10,18 +15,63 @@ import matplotlib.pyplot as plt
 from ..models import DiagnosisResult
 from ..model_loader import model_loader
 from ..xai_visualizer import XAIVisualizer
+from ..supabase import supabase
+
+
+def _load_image_and_output_dir(diagnosis: DiagnosisResult):
+    """Load image either from local file or from Supabase URL.
+
+    Returns (original_image_rgb, output_dir) or (None, error_msg).
+    """
+    media_root = getattr(settings, "MEDIA_ROOT", None)
+
+    # Prefer local file if available
+    if diagnosis.image and getattr(diagnosis.image, "name", None):
+        try:
+            image_path = diagnosis.image.path
+            original_image = cv2.imread(image_path)
+            if original_image is None:
+                return None, f"Could not read image at {image_path}"
+            original_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB)
+            output_dir = Path(image_path).parent
+            return original_image, output_dir
+        except Exception as e:
+            # Fall back to URL below
+            print("XAI: error reading local image, falling back to URL:", e)
+
+    # Fallback: load from Supabase/public URL
+    if diagnosis.image_url:
+        try:
+            with urllib.request.urlopen(diagnosis.image_url) as resp:
+                data = resp.read()
+            nparr = np.frombuffer(data, np.uint8)
+            original_image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if original_image is None:
+                return None, f"Could not decode image from URL {diagnosis.image_url}"
+            original_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB)
+
+            # Save XAI outputs under MEDIA_ROOT/dental_images
+            if media_root:
+                output_dir = Path(media_root) / "dental_images"
+            else:
+                output_dir = Path("media") / "dental_images"
+            os.makedirs(output_dir, exist_ok=True)
+            return original_image, output_dir
+        except Exception as e:
+            return None, f"Error fetching image from URL: {e}"
+
+    return None, "Diagnosis has no associated image file or URL"
 
 
 def explain_diagnosis(request, diagnosis_id):
     try:
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
-        image_path = diagnosis.image.path
-        original_image = cv2.imread(image_path)
 
+        original_image, output_dir_or_error = _load_image_and_output_dir(diagnosis)
         if original_image is None:
-            return JsonResponse({'success': False, 'error': f'Could not read image at {image_path}'}, status=500)
+            return JsonResponse({"success": False, "error": output_dir_or_error}, status=500)
 
-        original_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB)
+        output_dir = output_dir_or_error
         preprocessed = model_loader.preprocess_image(original_image)
         predictions = model_loader.predict(preprocessed)
         severity_result = model_loader.classify_severity(predictions)
@@ -40,17 +90,37 @@ def explain_diagnosis(request, diagnosis_id):
             original_image=original_image,
             preprocessed_image=preprocessed,
             segmentation_mask=predictions,
-            severity_result=severity_result
+            severity_result=severity_result,
         )
 
-        output_dir = Path(image_path).parent
+        # Save locally (optional cache)
         output_filename = f'xai_explanation_{diagnosis_id}.png'
         output_path = output_dir / output_filename
         xai.save_explanation(fig, output_path)
 
-        plt.close(fig)
+        # Also upload to Supabase so the XAI image is stored with other images
+        supa_path = f"xai/{diagnosis_id}/xai_explanation_{diagnosis_id}.png"
+        try:
+            buf = io.BytesIO()
+            fig.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+            buf.seek(0)
+            # Use upsert so repeated calls do not error with 409 Duplicate
+            supabase.storage.from_("images").upload(
+                supa_path,
+                buf.getvalue(),
+                {"content-type": "image/png", "upsert": True},
+            )
+            explanation_url = supabase.storage.from_("images").get_public_url(supa_path)
+        except Exception as e:
+            # If upload fails (e.g. duplicate), try to reuse any existing Supabase file
+            print("XAI Supabase upload error (explanation):", e)
+            try:
+                explanation_url = supabase.storage.from_("images").get_public_url(supa_path)
+            except Exception:
+                # Fallback to local MEDIA_URL if Supabase is unavailable
+                explanation_url = f"{settings.MEDIA_URL}dental_images/{output_filename}"
 
-        explanation_url = f"{settings.MEDIA_URL}dental_images/{output_filename}"
+        plt.close(fig)
 
         if has_caries:
             interpretation = {
@@ -99,13 +169,11 @@ def explain_diagnosis(request, diagnosis_id):
 def quick_xai_overlay(request, diagnosis_id):
     try:
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
-        image_path = diagnosis.image.path
-        original_image = cv2.imread(image_path)
-
+        original_image, output_dir_or_error = _load_image_and_output_dir(diagnosis)
         if original_image is None:
-            return JsonResponse({'success': False, 'error': f'Could not read image at {image_path}'}, status=500)
+            return JsonResponse({"success": False, "error": output_dir_or_error}, status=500)
 
-        original_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB)
+        output_dir = output_dir_or_error
         preprocessed = model_loader.preprocess_image(original_image)
         predictions = model_loader.predict(preprocessed)
         severity_result = model_loader.classify_severity(predictions)
@@ -116,13 +184,29 @@ def quick_xai_overlay(request, diagnosis_id):
 
         xai = XAIVisualizer(model_loader.load_model())
         overlay, _ = xai.visualize_segmentation_overlay(original_image, predictions)
-
-        output_dir = Path(image_path).parent
         output_filename = f'xai_quick_{diagnosis_id}.png'
         output_path = output_dir / output_filename
         cv2.imwrite(str(output_path), cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR))
 
-        overlay_url = f"{settings.MEDIA_URL}dental_images/{output_filename}"
+        # Upload quick overlay PNG to Supabase
+        supa_path = f"xai/{diagnosis_id}/xai_quick_{diagnosis_id}.png"
+        try:
+            success, png_arr = cv2.imencode('.png', cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR))
+            if not success:
+                raise RuntimeError('Failed to encode quick overlay PNG')
+            # Use upsert so repeated calls do not error with 409 Duplicate
+            supabase.storage.from_("images").upload(
+                supa_path,
+                png_arr.tobytes(),
+                {"content-type": "image/png", "upsert": True},
+            )
+            overlay_url = supabase.storage.from_("images").get_public_url(supa_path)
+        except Exception as e:
+            print("XAI Supabase upload error (quick overlay):", e)
+            try:
+                overlay_url = supabase.storage.from_("images").get_public_url(supa_path)
+            except Exception:
+                overlay_url = f"{settings.MEDIA_URL}dental_images/{output_filename}"
         description = (
             f'Red areas indicate suspected caries ({affected_pct:.2f}% affected)'
             if has_caries
@@ -148,9 +232,11 @@ def quick_xai_overlay(request, diagnosis_id):
 def get_gradcam(request, diagnosis_id):
     try:
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
-        image_path = diagnosis.image.path
-        original_image = cv2.imread(image_path)
-        original_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB)
+        original_image, output_dir_or_error = _load_image_and_output_dir(diagnosis)
+        if original_image is None:
+            return JsonResponse({"success": False, "error": output_dir_or_error}, status=500)
+
+        output_dir = output_dir_or_error
 
         preprocessed = model_loader.preprocess_image(original_image)
         predictions = model_loader.predict(preprocessed)
@@ -162,13 +248,29 @@ def get_gradcam(request, diagnosis_id):
         xai = XAIVisualizer(model_loader.load_model())
         gradcam = xai.generate_gradcam(preprocessed)
         gradcam_overlay = xai.overlay_heatmap(gradcam, original_image)
-
-        output_dir = Path(image_path).parent
         output_filename = f'gradcam_{diagnosis_id}.png'
         output_path = output_dir / output_filename
         cv2.imwrite(str(output_path), cv2.cvtColor(gradcam_overlay, cv2.COLOR_RGB2BGR))
 
-        gradcam_url = f"{settings.MEDIA_URL}dental_images/{output_filename}"
+        # Upload Grad-CAM overlay PNG to Supabase
+        supa_path = f"xai/{diagnosis_id}/gradcam_{diagnosis_id}.png"
+        try:
+            success, png_arr = cv2.imencode('.png', cv2.cvtColor(gradcam_overlay, cv2.COLOR_RGB2BGR))
+            if not success:
+                raise RuntimeError('Failed to encode Grad-CAM PNG')
+            # Use upsert so repeated calls do not error with 409 Duplicate
+            supabase.storage.from_("images").upload(
+                supa_path,
+                png_arr.tobytes(),
+                {"content-type": "image/png", "upsert": True},
+            )
+            gradcam_url = supabase.storage.from_("images").get_public_url(supa_path)
+        except Exception as e:
+            print("XAI Supabase upload error (gradcam):", e)
+            try:
+                gradcam_url = supabase.storage.from_("images").get_public_url(supa_path)
+            except Exception:
+                gradcam_url = f"{settings.MEDIA_URL}dental_images/{output_filename}"
         description = (
             'Heatmap showing which regions influenced the caries detection (brighter = more influential)'
             if has_caries
