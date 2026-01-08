@@ -9,6 +9,11 @@ from .serializers import (
     PatientSerializer, PatientDetailSerializer, 
     PatientCreateUpdateSerializer, RecordSerializer
 )
+from django.utils import timezone
+from datetime import timedelta
+from django.db.models.functions import TruncDate
+from django.db.models import Count
+from AIModel.models import DiagnosisResult
 
 
 # ============ PATIENT VIEWS ============
@@ -294,3 +299,46 @@ def dashboard_stats(request):
     }
     
     return Response(stats, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def scans_activity(request):
+    """
+    Return daily scan counts for the authenticated user.
+    Query params:
+      - days (int): number of days back from today (default 30)
+    Response: { data: [{date: 'YYYY-MM-DD', count: N}, ...] }
+    """
+    try:
+        days = int(request.query_params.get('days', 30))
+        if days < 1:
+            days = 30
+
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days - 1)
+
+        # Include scans for the user OR scans without a user assigned
+        qs = DiagnosisResult.objects.filter(
+            uploaded_at__date__gte=start_date,
+            uploaded_at__date__lte=end_date
+        ).filter(
+            Q(user=request.user) | Q(user__isnull=True)
+        )
+
+        daily_qs = qs.annotate(day=TruncDate('uploaded_at')).values('day').annotate(count=Count('id')).order_by('day')
+
+        counts_map = {item['day'].isoformat(): item['count'] for item in daily_qs}
+
+        # Fill missing dates with zeros
+        data = []
+        current = start_date
+        while current <= end_date:
+            dstr = current.isoformat()
+            data.append({'date': dstr, 'count': counts_map.get(dstr, 0)})
+            current = current + timedelta(days=1)
+
+        return Response({'success': True, 'data': data}, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
