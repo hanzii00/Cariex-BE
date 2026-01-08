@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     # Dashboard stats
     path('stats/', views.dashboard_stats, name='dashboard_stats'),
+    path('scans-activity/', views.scans_activity, name='scans_activity'),
     
     # Patient endpoints
     path('patients/', views.patient_list_create, name='patient_list_create'),
