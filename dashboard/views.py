@@ -318,12 +318,16 @@ def scans_activity(request):
         end_date = timezone.now().date()
         start_date = end_date - timedelta(days=days - 1)
 
-        # Include scans for the user OR scans without a user assigned
+        # Get scans for patients that belong to this user
+        user_patient_ids = Patient.objects.filter(
+            created_by=request.user
+        ).values_list('id', flat=True)
+
+        # Filter scans by patients owned by this user
         qs = DiagnosisResult.objects.filter(
             uploaded_at__date__gte=start_date,
-            uploaded_at__date__lte=end_date
-        ).filter(
-            Q(user=request.user) | Q(user__isnull=True)
+            uploaded_at__date__lte=end_date,
+            patient_id__in=user_patient_ids  # Filter by patient ownership
         )
 
         daily_qs = qs.annotate(day=TruncDate('uploaded_at')).values('day').annotate(count=Count('id')).order_by('day')
