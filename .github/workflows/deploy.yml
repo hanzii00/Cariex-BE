@@ -29,7 +29,6 @@ jobs:
       CI: true
       GITHUB_ACTIONS: true
       
-      SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
       DEBUG: False
       
       DB_NAME: test_db
@@ -72,6 +71,14 @@ jobs:
       - name: Upgrade pip
         run: |
           python -m pip install --upgrade pip setuptools wheel
+
+      - name: Ensure SECRET_KEY exists for CI
+        run: |
+          if [ -z "${{ secrets.DJANGO_SECRET_KEY }}" ]; then
+            echo "SECRET_KEY=ci_test_secret_change_me" >> $GITHUB_ENV
+          else
+            echo "SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" >> $GITHUB_ENV
+          fi
       
       - name: Install PyTorch (CPU-only for CI)
         run: |
