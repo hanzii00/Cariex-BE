@@ -4,38 +4,31 @@ from decouple import config
 import os
 import dj_database_url
 
-# BASE DIRECTORY
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# External/render URL (may be empty in local/dev)
 RENDER_EXTERNAL_URL = config('RENDER_EXTERNAL_URL', default='')
 
-# ----------------------
-# SECURITY SETTINGS
-# ----------------------
+
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = [RENDER_EXTERNAL_URL] if RENDER_EXTERNAL_URL else []
+if RENDER_EXTERNAL_URL:
+    ALLOWED_HOSTS = [RENDER_EXTERNAL_URL]
+else:
+    ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0.0.0.0']
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_TRUSTED_ORIGINS = [f"https://{RENDER_EXTERNAL_URL}"] if RENDER_EXTERNAL_URL else []
 
-# ----------------------
-# MEDIA FILES
-# ----------------------
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# ----------------------
-# STATIC FILES
-# ----------------------
+
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# ----------------------
-# APPLICATIONS
-# ----------------------
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -59,7 +52,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # <--- serve static files
+    'whitenoise.middleware.WhiteNoiseMiddleware', 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -69,9 +62,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# ----------------------
-# TEMPLATES (required by admin)
-# ----------------------
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -88,22 +79,16 @@ TEMPLATES = [
     },
 ]
 
-# ----------------------
-# URL & WSGI
-# ----------------------
+
 ROOT_URLCONF = 'backend.urls'
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-# ----------------------
-# DATABASE
-# ----------------------
+
 DATABASES = {
     'default': dj_database_url.config(default=config('DATABASE_URL', default=f"postgres://{config('DB_USER')}:{config('DB_PASSWORD')}@{config('DB_HOST')}:{config('DB_PORT')}/{config('DB_NAME')}"))
 }
 
-# ----------------------
-# PASSWORD VALIDATION
-# ----------------------
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',},
@@ -111,22 +96,16 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
 ]
 
-# ----------------------
-# INTERNATIONALIZATION
-# ----------------------
+
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# ----------------------
-# CUSTOM USER MODEL
-# ----------------------
+
 AUTH_USER_MODEL = 'authentication.User'
 
-# ----------------------
-# EMAIL SETTINGS
-# ----------------------
+
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = config('EMAIL_PORT', cast=int, default=587)
@@ -135,9 +114,7 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
-# ----------------------
-# REST FRAMEWORK & JWT
-# ----------------------
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -157,25 +134,19 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# ----------------------
-# CORS SETTINGS
-# ----------------------
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://cariex.netlify.app"
 ]
 if RENDER_EXTERNAL_URL:
     CORS_ALLOWED_ORIGINS.append(f"https://{RENDER_EXTERNAL_URL}")
 CORS_ALLOW_CREDENTIALS = True
 
-# ----------------------
-# SITE ID
-# ----------------------
+
 SITE_ID = 1
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# ----------------------
-# SUPABASE CONFIG
-# ----------------------
 SUPABASE_URL = config('SUPABASE_URL', default='')
 SUPABASE_KEY = config('SUPABASE_KEY', default='')

@@ -7,21 +7,27 @@ import numpy as np
 import os
 import io
 import uuid
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+
+# Import matplotlib conditionally
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    HAVE_MATPLOTLIB = True
+except ImportError:
+    matplotlib = None
+    plt = None
+    HAVE_MATPLOTLIB = False
 
 from ..models import DiagnosisResult
 from ..model_loader import model_loader
 from ..xai_visualizer import XAIVisualizer
 from ..supabase import supabase
 
-# Import cv2 lazily; XAI endpoints require OpenCV but it may be absent in CI/test
 try:
     import cv2
 except Exception:
     cv2 = None
-
 
 def _load_image_and_output_dir(diagnosis: DiagnosisResult):
     """Load image either from local file or from Supabase URL.
@@ -71,8 +77,14 @@ def _load_image_and_output_dir(diagnosis: DiagnosisResult):
 
     return None, "Diagnosis has no associated image file or URL"
 
-
 def explain_diagnosis(request, diagnosis_id):
+    # Check if matplotlib is available
+    if not HAVE_MATPLOTLIB:
+        return JsonResponse({
+            'success': False, 
+            'error': 'matplotlib is not installed. XAI explanation reports require matplotlib.'
+        }, status=503)
+    
     try:
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
 
@@ -81,9 +93,14 @@ def explain_diagnosis(request, diagnosis_id):
             return JsonResponse({"success": False, "error": output_dir_or_error}, status=500)
 
         output_dir = output_dir_or_error
-        preprocessed = model_loader.preprocess_image(original_image)
-        predictions = model_loader.predict(preprocessed)
-        severity_result = model_loader.classify_severity(predictions)
+        try:
+            preprocessed = model_loader.preprocess_image(original_image)
+            predictions = model_loader.predict(preprocessed)
+            severity_result = model_loader.classify_severity(predictions)
+        except ImportError as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=503)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
         affected_pct = severity_result.get('affected_percentage', 0)
         max_prob = severity_result.get('max_probability', 0)
@@ -94,13 +111,18 @@ def explain_diagnosis(request, diagnosis_id):
         if model is None:
             return JsonResponse({'success': False, 'error': 'Model could not be loaded'}, status=500)
 
-        xai = XAIVisualizer(model)
-        fig = xai.create_explanation_report(
-            original_image=original_image,
-            preprocessed_image=preprocessed,
-            segmentation_mask=predictions,
-            severity_result=severity_result,
-        )
+        try:
+            xai = XAIVisualizer(model)
+            fig = xai.create_explanation_report(
+                original_image=original_image,
+                preprocessed_image=preprocessed,
+                segmentation_mask=predictions,
+                severity_result=severity_result,
+            )
+        except ImportError as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=503)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
         # Save locally (optional cache)
         output_filename = f'xai_explanation_{diagnosis_id}.png'
