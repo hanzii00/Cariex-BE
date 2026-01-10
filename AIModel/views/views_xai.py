@@ -7,9 +7,17 @@ import numpy as np
 import os
 import io
 import uuid
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+
+# Import matplotlib conditionally
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    HAVE_MATPLOTLIB = True
+except ImportError:
+    matplotlib = None
+    plt = None
+    HAVE_MATPLOTLIB = False
 
 from ..models import DiagnosisResult
 from ..model_loader import model_loader
@@ -70,6 +78,13 @@ def _load_image_and_output_dir(diagnosis: DiagnosisResult):
     return None, "Diagnosis has no associated image file or URL"
 
 def explain_diagnosis(request, diagnosis_id):
+    # Check if matplotlib is available
+    if not HAVE_MATPLOTLIB:
+        return JsonResponse({
+            'success': False, 
+            'error': 'matplotlib is not installed. XAI explanation reports require matplotlib.'
+        }, status=503)
+    
     try:
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
 
