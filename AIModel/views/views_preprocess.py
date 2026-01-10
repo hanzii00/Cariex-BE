@@ -1,6 +1,10 @@
 from django.http import JsonResponse
-import cv2
 import traceback
+
+try:
+    import cv2
+except Exception:
+    cv2 = None
 
 from ..models import DiagnosisResult
 from ..model_loader import model_loader
@@ -9,6 +13,8 @@ import time
 
 def preprocess_image(request, diagnosis_id):
     try:
+        if cv2 is None:
+            return JsonResponse({'success': False, 'error': 'OpenCV (cv2) is not installed in this environment.'}, status=503)
         start = time.time()
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
         diagnosis.status = 'preprocessing'
