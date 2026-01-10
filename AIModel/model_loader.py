@@ -121,6 +121,7 @@ class ModelLoader:
                 'confidence': min(confidence, 100.0),
                 'affected_percentage': affected_percentage,
                 'mean_probability': float(mean_probability),
+                'max_probability': float(mean_probability),
                 'max_probability': float(max_probability),
                 'segmentation_mask': segmentation_mask
             }
