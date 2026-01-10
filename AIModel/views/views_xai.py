@@ -1,6 +1,5 @@
 from django.http import JsonResponse
 from django.conf import settings
-import cv2
 import traceback
 from pathlib import Path
 import urllib.request
@@ -17,6 +16,12 @@ from ..model_loader import model_loader
 from ..xai_visualizer import XAIVisualizer
 from ..supabase import supabase
 
+# Import cv2 lazily; XAI endpoints require OpenCV but it may be absent in CI/test
+try:
+    import cv2
+except Exception:
+    cv2 = None
+
 
 def _load_image_and_output_dir(diagnosis: DiagnosisResult):
     """Load image either from local file or from Supabase URL.
@@ -24,6 +29,10 @@ def _load_image_and_output_dir(diagnosis: DiagnosisResult):
     Returns (original_image_rgb, output_dir) or (None, error_msg).
     """
     media_root = getattr(settings, "MEDIA_ROOT", None)
+
+    # If OpenCV is not available, signal the caller
+    if cv2 is None:
+        return None, 'OpenCV (cv2) is not installed in this environment.'
 
     # Prefer local file if available
     if diagnosis.image and getattr(diagnosis.image, "name", None):
