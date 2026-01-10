@@ -90,11 +90,6 @@ pydantic-core==2.41.5
 annotated-types==0.7.0
 typing-inspection==0.4.2
 
-# PyTorch - Compatible versions for Python 3.11
-torch==2.4.1
-torchvision==0.19.1
-torchaudio==2.4.1
-
 # Transformers & NLP
 transformers==4.46.3
 tokenizers==0.20.3
@@ -165,3 +160,4 @@ colorama==0.4.6
 wcwidth==0.2.13
 setuptools==75.1.0
 wheel==0.44.0
+
