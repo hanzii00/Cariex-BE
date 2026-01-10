@@ -1,23 +1,46 @@
-import tensorflow as tf
 import numpy as np
-import cv2
+from pathlib import Path
+
+# Import TensorFlow conditionally
+try:
+    import tensorflow as tf
+    HAVE_TENSORFLOW = True
+except ImportError:
+    tf = None
+    HAVE_TENSORFLOW = False
+
+# Import OpenCV conditionally
+try:
+    import cv2
+    HAVE_CV2 = True
+except ImportError:
+    cv2 = None
+    HAVE_CV2 = False
+
+# Import matplotlib conditionally
 try:
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     HAVE_MATPLOTLIB = True
-except Exception:
+except ImportError:
     matplotlib = None
     plt = None
     HAVE_MATPLOTLIB = False
-from pathlib import Path
 
 
 class XAIVisualizer:
     def __init__(self, model):
+        if not HAVE_TENSORFLOW:
+            raise ImportError('TensorFlow is required for XAI visualization')
+        if not HAVE_CV2:
+            raise ImportError('OpenCV (cv2) is required for XAI visualization')
         self.model = model
 
     def generate_gradcam(self, image, layer_name=None):
+        if not HAVE_TENSORFLOW:
+            raise ImportError('TensorFlow is required for Grad-CAM')
+        
         if layer_name is None:
             layer_name = self._find_last_conv_layer()
 
@@ -44,7 +67,13 @@ class XAIVisualizer:
                 return layer.name
         return self.model.layers[-2].name
 
-    def overlay_heatmap(self, heatmap, original_image, alpha=0.4, colormap=cv2.COLORMAP_JET):
+    def overlay_heatmap(self, heatmap, original_image, alpha=0.4, colormap=None):
+        if not HAVE_CV2:
+            raise ImportError('OpenCV (cv2) is required for heatmap overlay')
+        
+        if colormap is None:
+            colormap = cv2.COLORMAP_JET
+            
         heatmap_resized = cv2.resize(heatmap, (original_image.shape[1], original_image.shape[0]))
         heatmap_colored = cv2.applyColorMap(np.uint8(255 * heatmap_resized), colormap)
         heatmap_colored = cv2.cvtColor(heatmap_colored, cv2.COLOR_BGR2RGB)
@@ -56,6 +85,9 @@ class XAIVisualizer:
         return overlayed
 
     def generate_integrated_gradients(self, image, baseline=None, steps=50):
+        if not HAVE_TENSORFLOW:
+            raise ImportError('TensorFlow is required for Integrated Gradients')
+            
         if baseline is None:
             baseline = np.zeros_like(image)
 
@@ -74,6 +106,9 @@ class XAIVisualizer:
         return integrated_grads[0].numpy()
 
     def visualize_segmentation_overlay(self, original_image, segmentation_mask, threshold=0.5):
+        if not HAVE_CV2:
+            raise ImportError('OpenCV (cv2) is required for segmentation overlay')
+            
         if len(segmentation_mask.shape) == 4:
             segmentation_mask = segmentation_mask[0, :, :, 0]
 
@@ -186,6 +221,12 @@ Max Probability: {max_prob:.4f}
 
 
 def generate_xai_explanation(diagnosis_id):
+    """Legacy function - requires all dependencies"""
+    if not HAVE_CV2:
+        raise ImportError('OpenCV (cv2) is required for XAI explanation generation')
+    if not HAVE_TENSORFLOW:
+        raise ImportError('TensorFlow is required for XAI explanation generation')
+        
     from .models import DiagnosisResult
     from .model_loader import model_loader
 
