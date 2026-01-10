@@ -1,9 +1,15 @@
 import tensorflow as tf
 import numpy as np
 import cv2
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    HAVE_MATPLOTLIB = True
+except Exception:
+    matplotlib = None
+    plt = None
+    HAVE_MATPLOTLIB = False
 from pathlib import Path
 
 
@@ -99,6 +105,9 @@ class XAIVisualizer:
         return overlayed, colored_mask
 
     def create_explanation_report(self, original_image, preprocessed_image, segmentation_mask, severity_result):
+        if not HAVE_MATPLOTLIB or plt is None:
+            raise ImportError('matplotlib is required to create XAI explanation reports')
+
         fig, axes = plt.subplots(2, 3, figsize=(15, 10))
         fig.suptitle('Explainable AI - Dental Caries Detection', fontsize=16, fontweight='bold')
 
@@ -171,6 +180,8 @@ Max Probability: {max_prob:.4f}
         return fig
 
     def save_explanation(self, fig, output_path):
+        if not HAVE_MATPLOTLIB or plt is None:
+            raise ImportError('matplotlib is required to save XAI explanation reports')
         fig.savefig(output_path, dpi=150, bbox_inches='tight')
 
 
