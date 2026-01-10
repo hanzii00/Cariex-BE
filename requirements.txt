@@ -1,38 +1,17 @@
-# Django Core
 Django==5.0.2
 djangorestframework==3.14.0
 djangorestframework-simplejwt==5.5.1
-
-# Authentication
 djoser==2.3.3
 django-allauth==65.13.0
-PyJWT==2.10.1
-
-# CORS
 django-cors-headers==4.3.1
-
-# Database
 psycopg2-binary==2.9.10
 dj-database-url==2.3.0
-
-# Server
 gunicorn==23.0.0
 whitenoise==6.11.0
-
-# Configuration
 python-decouple==3.8
-
-# Image Processing
 Pillow==10.4.0
 opencv-python-headless==4.10.0.84
-
-# HTTP
 requests==2.32.3
-
-# Supabase
 supabase==2.24.0
-
-# ML
 numpy==1.26.4
 tensorflow-cpu==2.15.0
-keras==2.15.0
