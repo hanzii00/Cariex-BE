@@ -99,19 +99,22 @@ sentencepiece==0.2.1
 accelerate==1.2.1
 regex==2024.11.6
 
-# Datasets
-datasets==3.0.0
-xxhash==3.5.0
-pyarrow==18.0.0
-
 # Data Science & ML
-numpy==2.1.0
-pandas==2.2.0
-scikit-learn==1.5.0
-scipy==1.14.0
-scikit-image==0.24.0
-joblib==1.4.0
-threadpoolctl==3.5.0
+numpy>=2.1.0
+pandas>=2.2.3
+scikit-learn>=1.5.0
+scipy>=1.14.0
+scikit-image>=0.24.0
+joblib>=1.4.0
+threadpoolctl>=3.5.0
+
+# Datasets
+datasets>=3.0.0
+dill>=0.3.9
+multiprocess>=0.70.17
+xxhash>=3.5.0
+pyarrow>=18.0.0
+fsspec>=2024.10.0
 
 # Computer Vision
 albumentations==1.4.22
@@ -157,6 +160,7 @@ colorama==0.4.6
 wcwidth==0.2.13
 setuptools==75.1.0
 wheel==0.44.0
+
 
 
 
