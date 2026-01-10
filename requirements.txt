@@ -8,15 +8,8 @@ sqlparse==0.5.3
 # Authentication & Social Auth
 djoser==2.3.3
 django-allauth==65.13.0
-dj-rest-auth==7.0.1
+dj-rest-auth  # No version specified - gets latest compatible
 social-auth-app-django==5.4.3
-social-auth-core==4.5.6
-PyJWT==2.10.1
-oauthlib==3.2.2
-requests-oauthlib==2.0.0
-python3-openid==3.2.0
-argon2-cffi==23.1.0
-argon2-cffi-bindings==21.2.0
 
 # CORS and Security
 django-cors-headers==4.3.1
@@ -160,6 +153,7 @@ colorama==0.4.6
 wcwidth==0.2.13
 setuptools==75.1.0
 wheel==0.44.0
+
 
 
 
