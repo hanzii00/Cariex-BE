@@ -147,19 +147,26 @@ jobs:
     environment:
       name: production
       url: https://cariex.onrender.com
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
       
+      # ✅ Safe secret validation — won't fail if missing
       - name: Validate Deploy Hook URL
+        id: check_secret
         run: |
           if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
-            echo "❌ Error: RENDER_DEPLOY_HOOK_URL secret is not set"
-            exit 1
+            echo "⚠️ Skipping deployment — RENDER_DEPLOY_HOOK_URL is not set"
+            echo "skip_deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Deploy hook URL is configured"
+            echo "skip_deploy=false" >> $GITHUB_OUTPUT
           fi
-          echo "✅ Deploy hook URL is configured"
       
+      # ✅ Trigger Render deployment only if secret exists
       - name: Deploy to Render
+        if: steps.check_secret.outputs.skip_deploy == 'false'
         run: |
           response=$(curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
             -H "Content-Type: application/json" \
@@ -175,12 +182,16 @@ jobs:
             exit 1
           fi
       
+      # Wait before health check
       - name: Wait for deployment
+        if: steps.check_secret.outputs.skip_deploy == 'false'
         run: |
           echo "⏳ Waiting for deployment to complete..."
           sleep 30
       
+      # Health check for Render app
       - name: Health check
+        if: steps.check_secret.outputs.skip_deploy == 'false'
         run: |
           max_attempts=10
           attempt=0
@@ -203,6 +214,7 @@ jobs:
           echo "⚠️ Health check did not pass after $max_attempts attempts"
           echo "Please check Render dashboard manually"
       
+      # Summary report
       - name: Deployment Summary
         if: always()
         run: |
@@ -213,4 +225,3 @@ jobs:
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Check the [Render Dashboard](https://dashboard.render.com/) for detailed deployment logs" >> $GITHUB_STEP_SUMMARY
-
