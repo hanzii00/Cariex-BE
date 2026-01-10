@@ -1,6 +1,11 @@
 from django.http import JsonResponse
-import cv2
 import traceback
+
+# Import cv2 lazily; optional in CI/test environments
+try:
+    import cv2
+except Exception:
+    cv2 = None
 
 from ..models import DiagnosisResult
 from ..model_loader import model_loader
@@ -8,6 +13,8 @@ from ..model_loader import model_loader
 
 def detect_caries(request, diagnosis_id):
     try:
+        if cv2 is None:
+            return JsonResponse({'success': False, 'error': 'OpenCV (cv2) is not installed in this environment.'}, status=503)
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
         diagnosis.status = 'detecting'
         diagnosis.save()

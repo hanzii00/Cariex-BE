@@ -15,9 +15,14 @@ from rest_framework.decorators import api_view, permission_classes  # ✅ Add th
 from rest_framework.permissions import IsAuthenticated  # ✅ Add this
 from rest_framework.response import Response  # ✅ Add this
 from rest_framework import status  # ✅ Add this
-import cv2
 import numpy as np
 import traceback
+
+# Import cv2 lazily; not required for listing/managing diagnoses
+try:
+    import cv2
+except Exception:
+    cv2 = None
 
 from ..models import DiagnosisResult
 from ..model_loader import model_loader
