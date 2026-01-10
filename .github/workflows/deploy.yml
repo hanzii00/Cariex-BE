@@ -146,20 +146,71 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: https://specialproblems-be.onrender.com
+      url: https://cariex.onrender.com
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
       
+      - name: Validate Deploy Hook URL
+        run: |
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            echo "❌ Error: RENDER_DEPLOY_HOOK_URL secret is not set"
+            exit 1
+          fi
+          echo "✅ Deploy hook URL is configured"
+      
       - name: Deploy to Render
         run: |
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
+          response=$(curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
             -H "Content-Type: application/json" \
-            -d '{}'
+            -w "\n%{http_code}" \
+            -d '{}')
+          
+          http_code=$(echo "$response" | tail -n1)
+          
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "✅ Deployment triggered successfully (HTTP $http_code)"
+          else
+            echo "❌ Deployment failed (HTTP $http_code)"
+            exit 1
+          fi
       
-      - name: Deployment Status
+      - name: Wait for deployment
         run: |
-          echo "✅ Deployment triggered successfully!"
-          echo "Check Render dashboard for deployment status" 
-
+          echo "⏳ Waiting for deployment to complete..."
+          sleep 30
+      
+      - name: Health check
+        run: |
+          max_attempts=10
+          attempt=0
+          
+          while [ $attempt -lt $max_attempts ]; do
+            attempt=$((attempt + 1))
+            echo "🔍 Health check attempt $attempt/$max_attempts..."
+            
+            if curl -f -s -o /dev/null "https://cariex.onrender.com/"; then
+              echo "✅ Application is healthy!"
+              exit 0
+            fi
+            
+            if [ $attempt -lt $max_attempts ]; then
+              echo "⏳ Waiting 30 seconds before next attempt..."
+              sleep 30
+            fi
+          done
+          
+          echo "⚠️ Health check did not pass after $max_attempts attempts"
+          echo "Please check Render dashboard manually"
+      
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: Production" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: https://cariex.onrender.com" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check the [Render Dashboard](https://dashboard.render.com/) for detailed deployment logs" >> $GITHUB_STEP_SUMMARY
 
