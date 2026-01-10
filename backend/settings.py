@@ -11,9 +11,7 @@ RENDER_EXTERNAL_URL = config('RENDER_EXTERNAL_URL', default='')
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-# Fixed ALLOWED_HOSTS
 if RENDER_EXTERNAL_URL:
-    # Remove https:// or http:// from the URL if present
     hostname = RENDER_EXTERNAL_URL.replace('https://', '').replace('http://', '')
     ALLOWED_HOSTS = [hostname, '.onrender.com']
 else:
@@ -21,7 +19,6 @@ else:
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# Fixed CSRF_TRUSTED_ORIGINS
 if RENDER_EXTERNAL_URL:
     hostname = RENDER_EXTERNAL_URL.replace('https://', '').replace('http://', '')
     CSRF_TRUSTED_ORIGINS = [f"https://{hostname}"]
@@ -137,7 +134,6 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# Fixed CORS_ALLOWED_ORIGINS
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
