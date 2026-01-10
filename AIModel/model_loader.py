@@ -4,6 +4,13 @@ except ImportError:
     tf = None
 import numpy as np
 from pathlib import Path
+import os
+
+try:
+    import gdown
+except ImportError:
+    gdown = None
+
 try:
     import cv2
 except ImportError:
@@ -13,11 +20,41 @@ except ImportError:
 class ModelLoader:
     _instance = None
     _model = None
+    # Your Google Drive file ID
+    GDRIVE_FILE_ID = "1l6djhUw8ER1srMHpPaBhLoBm-RHFIyJL"
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
+
+    def download_model_if_needed(self, model_path):
+        """Download model from Google Drive if it doesn't exist locally"""
+        if model_path.exists():
+            print(f"Model already exists at {model_path}")
+            return
+        
+        if gdown is None:
+            raise ImportError("gdown is required to download the model. Install it with: pip install gdown")
+        
+        print(f"Downloading model from Google Drive...")
+        
+        try:
+            # Create directory if it doesn't exist
+            model_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Download from Google Drive
+            url = f"https://drive.google.com/uc?id={self.GDRIVE_FILE_ID}"
+            gdown.download(url, str(model_path), quiet=False)
+            
+            print(f"Model downloaded successfully to {model_path}")
+            
+        except Exception as e:
+            print(f"Error downloading model: {e}")
+            # Clean up partial download
+            if model_path.exists():
+                model_path.unlink()
+            raise
 
     def load_model(self):
         if self._model is None:
@@ -25,11 +62,19 @@ class ModelLoader:
                 raise ImportError(
                     "TensorFlow is not installed. Install tensorflow to use the AIModel features."
                 )
+            
             model_path = Path(__file__).parent / 'ml_models' / 'adult_teeth.h5'
+            
+            # Download from Google Drive if not exists
+            self.download_model_if_needed(model_path)
+            
             if not model_path.exists():
                 raise FileNotFoundError(f"Model file not found at {model_path}")
 
+            print(f"Loading model from {model_path}")
             self._model = tf.keras.models.load_model(str(model_path), compile=False)
+            print("Model loaded successfully")
+            
         return self._model
 
     def preprocess_image(self, image_array, target_size=None):
