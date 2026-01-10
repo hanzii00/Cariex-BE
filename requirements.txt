@@ -107,13 +107,15 @@ pyarrow>=18.0.0
 fsspec>=2024.10.0
 
 # Data Science & ML
-numpy>=2.1.0
+numpy>=1.24.0,<2.0.0
 pandas>=2.2.3
 scikit-learn>=1.5.0
 scipy>=1.14.0
 scikit-image>=0.24.0
 joblib>=1.4.0
 threadpoolctl>=3.5.0
+tensorflow-cpu==2.15.0
+keras==2.15.0
 
 # Computer Vision
 albumentations>=1.4.0
