@@ -7,15 +7,18 @@ import dj_database_url
 # BASE DIRECTORY
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# External/render URL (may be empty in local/dev)
+RENDER_EXTERNAL_URL = config('RENDER_EXTERNAL_URL', default='')
+
 # ----------------------
 # SECURITY SETTINGS
 # ----------------------
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = [config('RENDER_EXTERNAL_URL', '')]  # Render automatically sets this
+ALLOWED_HOSTS = [RENDER_EXTERNAL_URL] if RENDER_EXTERNAL_URL else []
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-CSRF_TRUSTED_ORIGINS = [f"https://{config('RENDER_EXTERNAL_URL')}"]
+CSRF_TRUSTED_ORIGINS = [f"https://{RENDER_EXTERNAL_URL}"] if RENDER_EXTERNAL_URL else []
 
 # ----------------------
 # MEDIA FILES
@@ -64,6 +67,25 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+# ----------------------
+# TEMPLATES (required by admin)
+# ----------------------
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
 ]
 
 # ----------------------
@@ -141,8 +163,9 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    f"https://{config('RENDER_EXTERNAL_URL', '')}"
 ]
+if RENDER_EXTERNAL_URL:
+    CORS_ALLOWED_ORIGINS.append(f"https://{RENDER_EXTERNAL_URL}")
 CORS_ALLOW_CREDENTIALS = True
 
 # ----------------------

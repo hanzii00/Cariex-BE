@@ -1,4 +1,7 @@
-import tensorflow as tf
+try:
+    import tensorflow as tf
+except ImportError:
+    tf = None
 import numpy as np
 from pathlib import Path
 import cv2
@@ -15,6 +18,10 @@ class ModelLoader:
 
     def load_model(self):
         if self._model is None:
+            if tf is None:
+                raise ImportError(
+                    "TensorFlow is not installed. Install tensorflow to use the AIModel features."
+                )
             model_path = Path(__file__).parent / 'ml_models' / 'adult_teeth.h5'
             if not model_path.exists():
                 raise FileNotFoundError(f"Model file not found at {model_path}")
