@@ -6,7 +6,13 @@ class DiagnosisResult(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('processing', 'Processing'),
+        ('preprocessing', 'Preprocessing'),
+        ('preprocessed', 'Preprocessed'),
+        ('detecting', 'Detecting'),
+        ('detected', 'Detected'),
+        ('classifying', 'Classifying'),
         ('completed', 'Completed'),
+        ('failed', 'Failed'),
     ]
 
     # Dentist / uploader
@@ -50,6 +56,9 @@ class DiagnosisResult(models.Model):
         default='pending'
     )
 
+    # Error tracking
+    error_message = models.TextField(blank=True, null=True)
+
     # Dentist validation
     verified_by_dentist = models.BooleanField(default=False)
     dentist_notes = models.TextField(blank=True)
@@ -58,4 +67,5 @@ class DiagnosisResult(models.Model):
         ordering = ['-uploaded_at']
 
     def __str__(self):
-        return f"Diagnosis {self.id} - {self.patient.full_name}"
+        patient_name = self.patient.full_name if self.patient else "Unknown"
+        return f"Diagnosis {self.id} - {patient_name}"
