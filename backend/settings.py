@@ -13,7 +13,7 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 if RENDER_EXTERNAL_URL:
     hostname = RENDER_EXTERNAL_URL.replace('https://', '').replace('http://', '')
-    ALLOWED_HOSTS = [hostname, '.onrender.com']
+    ALLOWED_HOSTS = [hostname, '.onrender.com', '127.0.0.1', 'localhost', '0.0.0.0']
 else:
     ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0.0.0.0']
 
