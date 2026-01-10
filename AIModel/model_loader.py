@@ -4,7 +4,10 @@ except ImportError:
     tf = None
 import numpy as np
 from pathlib import Path
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
 
 class ModelLoader:
@@ -34,6 +37,9 @@ class ModelLoader:
         if target_size is None:
             input_shape = model.input_shape[1:3]
             target_size = tuple(input_shape)
+
+        if cv2 is None:
+            raise ImportError("OpenCV (cv2) is required for image preprocessing. Install opencv-python.")
 
         img_resized = cv2.resize(image_array, target_size)
         img_normalized = img_resized.astype(np.float32) / 255.0
@@ -97,6 +103,9 @@ class ModelLoader:
         }
 
     def generate_bounding_boxes(self, segmentation_mask, threshold=0.5, min_area=100):
+        if cv2 is None:
+            raise ImportError("OpenCV (cv2) is required for bounding box generation. Install opencv-python.")
+
         binary_mask = (segmentation_mask > threshold).astype(np.uint8) * 255
         contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
