@@ -90,42 +90,40 @@ pydantic-core==2.41.5
 annotated-types==0.7.0
 typing-inspection==0.4.2
 
-# PyTorch - use standard versions (Render will install CPU version on Linux)
-torch==2.5.1
-torchvision==0.20.1
-torchaudio==2.5.1
+# PyTorch - Compatible versions for Python 3.11
+torch==2.4.1
+torchvision==0.19.1
+torchaudio==2.4.1
 
 # Transformers & NLP
-transformers==4.57.3
-tokenizers==0.22.1
-huggingface-hub==0.36.0
-safetensors==0.7.0
+transformers==4.46.3
+tokenizers==0.20.3
+huggingface-hub==0.26.5
+safetensors==0.4.5
 sentencepiece==0.2.1
-accelerate==1.12.0
-regex==2025.11.3
+accelerate==1.2.1
+regex==2024.11.6
 
 # Datasets
-datasets==3.4.1
+datasets==3.2.0
 dill==0.3.7
 multiprocess==0.70.15
 xxhash==3.5.0
-pyarrow==22.0.0
+pyarrow==18.1.0
 fsspec==2023.10.0
 
 # Data Science & ML
 numpy==1.26.4
 pandas==2.2.3
-scikit-learn==1.6.1
-scipy==1.15.2
-scikit-image==0.25.2
+scikit-learn==1.5.2
+scipy==1.13.1
+scikit-image==0.24.0
 joblib==1.4.2
-threadpoolctl==3.6.0
+threadpoolctl==3.5.0
 
 # Computer Vision
-albumentations==2.0.8
+albumentations==1.4.22
 albucore==0.0.24
-ultralytics==8.3.243
-ultralytics-thop==2.0.18
 
 # Utilities
 python-dateutil==2.9.0.post0
