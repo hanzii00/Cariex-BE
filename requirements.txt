@@ -14,4 +14,4 @@ opencv-python-headless==4.10.0.84
 requests==2.32.3
 supabase==2.24.0
 numpy==1.26.4
-tensorflow-cpu==2.15.0
+tensorflow-cpu==2.16.2
