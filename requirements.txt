@@ -103,7 +103,7 @@ regex==2024.11.6
 datasets==2.14.6
 dill==0.3.7
 multiprocess==0.70.15
-xxhash==3.4.1
+xxhash==3.5.0
 pyarrow==14.0.1
 fsspec==2023.10.0
 
@@ -160,6 +160,7 @@ colorama==0.4.6
 wcwidth==0.2.13
 setuptools==75.1.0
 wheel==0.44.0
+
 
 
 
