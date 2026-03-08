@@ -125,6 +125,7 @@ def upload_image(request):
         return JsonResponse({
             'success': True,
             'diagnosis_id': diagnosis.id,
+            'xray_type': 'peri-apical',
             'image_url': image_url,
             'status': diagnosis.status,
             'has_caries': diagnosis.has_caries,

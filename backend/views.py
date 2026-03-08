@@ -14,15 +14,11 @@ def health_check(request):
 @csrf_exempt
 @require_http_methods(["GET", "HEAD", "OPTIONS"])
 def keepalive(request):
-    """Ping Supabase with a tiny query to keep the project awake."""
     try:
-        # Query a small, safe table. Replace 'keepalive' with an existing small table
-        # or create one (single row) in Supabase for this purpose.
+        from utils import supabase  # import here, not at module level
         resp = supabase.table("keepalive").select("id").limit(1).execute()
-        # If the client returns an error key, consider it a failure
         if hasattr(resp, "error") and resp.error:
             return JsonResponse({"status": "error", "detail": str(resp.error)}, status=500)
-
         return JsonResponse({"status": "ok", "detail": "Supabase awake"}, status=200)
     except Exception as e:
         return JsonResponse({"status": "error", "detail": str(e)}, status=500)
