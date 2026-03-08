@@ -243,7 +243,7 @@ def quick_xai_overlay(request, diagnosis_id):
         description = (
             f'Red areas indicate suspected caries ({affected_pct:.2f}% affected)'
             if has_caries
-            else 'No caries detected - original X-ray shows healthy tissue'
+            else 'No caries detected - original peri-apical X-ray shows healthy tissue'
         )
 
         return JsonResponse({
