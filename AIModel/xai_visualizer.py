@@ -154,7 +154,7 @@ class XAIVisualizer:
         has_caries = (affected_pct > 0.5) and (max_prob > 0.6)
 
         axes[0, 0].imshow(original_image)
-        axes[0, 0].set_title('Original X-ray')
+        axes[0, 0].set_title('Original Peri-apical X-ray')
         axes[0, 0].axis('off')
 
         if len(segmentation_mask.shape) == 4:

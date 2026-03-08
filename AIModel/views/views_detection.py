@@ -50,6 +50,7 @@ def detect_caries(request, diagnosis_id):
         return JsonResponse({
             'success': True,
             'diagnosis_id': diagnosis_id,
+            'xray_type': 'peri-apical',
             'has_caries': has_caries,
             'bounding_boxes': bounding_boxes,
             'num_lesions': len(bounding_boxes),
