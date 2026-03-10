@@ -11,4 +11,3 @@ db.sqlite3
 *.onnx
 media/
 venv/
-ml_models/
