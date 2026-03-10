@@ -11,19 +11,11 @@ RENDER_EXTERNAL_URL = config('RENDER_EXTERNAL_URL', default='')
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-if RENDER_EXTERNAL_URL:
-    hostname = RENDER_EXTERNAL_URL.replace('https://', '').replace('http://', '')
-    ALLOWED_HOSTS = [hostname, '.onrender.com', '127.0.0.1', 'localhost', '0.0.0.0']
-else:
-    ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0.0.0.0']
+ALLOWED_HOSTS = ['3.107.232.241', '127.0.0.1', 'localhost']
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-if RENDER_EXTERNAL_URL:
-    hostname = RENDER_EXTERNAL_URL.replace('https://', '').replace('http://', '')
-    CSRF_TRUSTED_ORIGINS = [f"https://{hostname}"]
-else:
-    CSRF_TRUSTED_ORIGINS = []
+CSRF_TRUSTED_ORIGINS = ['http://3.107.232.241']
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -139,9 +131,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "https://cariex.netlify.app"
 ]
-if RENDER_EXTERNAL_URL:
-    hostname = RENDER_EXTERNAL_URL.replace('https://', '').replace('http://', '')
-    CORS_ALLOWED_ORIGINS.append(f"https://{hostname}")
+CORS_ALLOWED_ORIGINS.append('http://3.107.232.241')
 CORS_ALLOW_CREDENTIALS = True
 
 SITE_ID = 1
