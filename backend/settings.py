@@ -14,7 +14,10 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = ['3.107.232.241', 'cariex.me', 'www.cariex.me']
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-CSRF_TRUSTED_ORIGINS = ['http://3.107.232.241']
+CSRF_TRUSTED_ORIGINS = [
+    'https://cariex.me',
+    'https://www.cariex.me'
+]
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
