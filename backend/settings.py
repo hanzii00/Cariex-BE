@@ -11,7 +11,7 @@ RENDER_EXTERNAL_URL = config('RENDER_EXTERNAL_URL', default='')
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = ['3.107.232.241', 'cariex.me', 'www.cariex.me']
+ALLOWED_HOSTS = ['cariex.me', 'www.cariex.me', '3.107.232.241', 'localhost', '127.0.0.1']
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 CSRF_TRUSTED_ORIGINS = [
