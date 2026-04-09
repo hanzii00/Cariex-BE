@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'dashboard',
     'accounts',
     'dentist_feedback',
+    'healthcheck',
 ]
 
 MIDDLEWARE = [
