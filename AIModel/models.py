@@ -46,6 +46,20 @@ class DiagnosisResult(models.Model):
     has_caries = models.BooleanField(default=False)
     severity = models.CharField(max_length=50, blank=True)
     confidence_score = models.FloatField(null=True)
+    
+    # Teeth position detection (upper/lower/mixed)
+    teeth_position = models.CharField(
+        max_length=20,
+        choices=[
+            ('upper', 'Upper Teeth'),
+            ('lower', 'Lower Teeth'),
+            ('mixed', 'Mixed Upper and Lower'),
+            ('unknown', 'Unknown')
+        ],
+        default='unknown',
+        blank=True
+    )
+    teeth_position_confidence = models.FloatField(default=0.0, blank=True)
 
     lesion_boxes = models.JSONField(null=True, blank=True)
 
