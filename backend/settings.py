@@ -142,4 +142,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 SUPABASE_URL = config('SUPABASE_URL', default='')
 SUPABASE_KEY = config('SUPABASE_KEY', default='')
-AWS_MODEL_URL = config('AWS_MODEL_URL') 
+AWS_MODEL_URL = config('AWS_MODEL_URL')
+GROQ_API_KEY = config('GROQ_API_KEY', default='')

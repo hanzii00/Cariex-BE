@@ -12,6 +12,7 @@ from .views_classification import classify_severity
 from .views_results import show_results, get_diagnosis_json
 from .views_xai import explain_diagnosis, quick_xai_overlay, get_gradcam
 from .views_diagnoses import get_all_diagnoses, get_single_diagnosis, delete_diagnosis
+from .views_groq_detection import detect_teeth_position_endpoint, get_teeth_position_info
 
 __all__ = [
     'upload_image',
@@ -26,4 +27,6 @@ __all__ = [
     'get_all_diagnoses',
     'get_single_diagnosis',
     'delete_diagnosis',
+    'detect_teeth_position_endpoint',
+    'get_teeth_position_info',
 ]
