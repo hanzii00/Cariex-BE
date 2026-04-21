@@ -23,4 +23,8 @@ urlpatterns = [
     path('diagnosis/all/', views.get_all_diagnoses, name='get_all_diagnoses'),
     path('diagnosis/<int:diagnosis_id>/', views.get_single_diagnosis, name='get_single_diagnosis'),
     path('diagnosis/<int:diagnosis_id>/delete/', views.delete_diagnosis, name='delete_diagnosis'),
+    
+    path('groq/detect-teeth-position/', views.detect_teeth_position_endpoint, name='detect_teeth_position'),
+    path('groq/detect-teeth-position/<int:diagnosis_id>/', views.detect_teeth_position_endpoint, name='detect_teeth_position_by_diagnosis'),
+    path('groq/teeth-position/<int:diagnosis_id>/', views.get_teeth_position_info, name='get_teeth_position_info'),
 ]

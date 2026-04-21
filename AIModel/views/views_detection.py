@@ -9,6 +9,7 @@ except Exception:
 
 from ..models import DiagnosisResult
 from ..model_loader import model_loader
+from ..groq_api import detect_teeth_position
 
 
 def detect_caries(request, diagnosis_id):
@@ -44,6 +45,12 @@ def detect_caries(request, diagnosis_id):
         has_caries = severity_result['severity'].lower() not in ['normal', 'class_0']
         diagnosis.lesion_boxes = bounding_boxes
         diagnosis.has_caries = has_caries
+        
+        teeth_position_result = detect_teeth_position(image_path)
+        if teeth_position_result['success']:
+            diagnosis.teeth_position = teeth_position_result['teeth_position']
+            diagnosis.teeth_position_confidence = teeth_position_result.get('confidence', 0)
+        
         diagnosis.status = 'detected'
         diagnosis.save()
         
@@ -55,6 +62,8 @@ def detect_caries(request, diagnosis_id):
             'bounding_boxes': bounding_boxes,
             'num_lesions': len(bounding_boxes),
             'affected_percentage': severity_result.get('affected_percentage', 0),
+            'teeth_position': teeth_position_result.get('teeth_position', 'unknown'),
+            'teeth_position_confidence': teeth_position_result.get('confidence', 0),
             'next_stage': 'classification'
         })
         
