@@ -19,36 +19,36 @@ def classify_severity(request, diagnosis_id):
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
         diagnosis.status = 'classifying'
         diagnosis.save()
-        
+
         image_path = diagnosis.image.path
         image = cv2.imread(image_path)
-        
+
         if image is None:
             return JsonResponse({
-                'success': False, 
+                'success': False,
                 'error': f'Could not read image at {image_path}'
             }, status=500)
-        
+
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         preprocessed = model_loader.preprocess_image(image_rgb)
-        
+
         predictions = model_loader.predict(preprocessed)
-        
+
         severity_result = model_loader.classify_severity(predictions)
-        
+
         if 'segmentation_mask' in severity_result:
             del severity_result['segmentation_mask']
-        
+
         severity_result = {
             key: _convert_to_native_type(value)
             for key, value in severity_result.items()
         }
-        
+
         diagnosis.severity = severity_result['severity']
         diagnosis.confidence_score = severity_result['confidence']
         diagnosis.status = 'completed'
         diagnosis.save()
-        
+
         return JsonResponse({
             'success': True,
             'diagnosis_id': diagnosis_id,
@@ -59,7 +59,7 @@ def classify_severity(request, diagnosis_id):
             'mean_probability': float(severity_result.get('mean_probability', 0)),
             'max_probability': float(severity_result.get('max_probability', 0))
         })
-        
+
     except DiagnosisResult.DoesNotExist:
         return JsonResponse({
             'success': False, 

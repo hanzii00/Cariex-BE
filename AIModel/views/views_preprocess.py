@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 import traceback
-
+ 
 try:
     import cv2
 except Exception:
