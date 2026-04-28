@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from pathlib import Path
 
-model_path = Path(__file__).parent / 'adult_teeth.h5'
+model_path = Path(__file__).parent / 'best_model.keras'  
 
 print(f"Looking for model at: {model_path}")
 print(f"Model exists: {model_path.exists()}")
