@@ -9,7 +9,6 @@ except Exception:
 
 from ..models import DiagnosisResult
 from ..model_loader import model_loader
-from ..groq_api import detect_teeth_position
 
 
 def detect_caries(request, diagnosis_id):
@@ -19,41 +18,35 @@ def detect_caries(request, diagnosis_id):
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
         diagnosis.status = 'detecting'
         diagnosis.save()
-        
+
         image_path = diagnosis.image.path
         image = cv2.imread(image_path)
-        
+
         if image is None:
             return JsonResponse({
-                'success': False, 
+                'success': False,
                 'error': f'Could not read image at {image_path}'
             }, status=500)
-        
+
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         preprocessed = model_loader.preprocess_image(image_rgb)
-        predictions = model_loader.predict(preprocessed)   
+        predictions = model_loader.predict(preprocessed)
         severity_result = model_loader.classify_severity(predictions)
-        
+
         bounding_boxes = []
         if 'segmentation_mask' in severity_result:
             bounding_boxes = model_loader.generate_bounding_boxes(
                 severity_result['segmentation_mask'],
                 threshold=0.5,
-                min_area=50  
+                min_area=50
             )
-        
+
         has_caries = severity_result['severity'].lower() not in ['normal', 'class_0']
         diagnosis.lesion_boxes = bounding_boxes
         diagnosis.has_caries = has_caries
-        
-        teeth_position_result = detect_teeth_position(image_path)
-        if teeth_position_result['success']:
-            diagnosis.teeth_position = teeth_position_result['teeth_position']
-            diagnosis.teeth_position_confidence = teeth_position_result.get('confidence', 0)
-        
         diagnosis.status = 'detected'
         diagnosis.save()
-        
+
         return JsonResponse({
             'success': True,
             'diagnosis_id': diagnosis_id,
@@ -62,11 +55,8 @@ def detect_caries(request, diagnosis_id):
             'bounding_boxes': bounding_boxes,
             'num_lesions': len(bounding_boxes),
             'affected_percentage': severity_result.get('affected_percentage', 0),
-            'teeth_position': teeth_position_result.get('teeth_position', 'unknown'),
-            'teeth_position_confidence': teeth_position_result.get('confidence', 0),
             'next_stage': 'classification'
         })
-        
     except DiagnosisResult.DoesNotExist:
         return JsonResponse({
             'success': False, 

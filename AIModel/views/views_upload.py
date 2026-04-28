@@ -34,13 +34,10 @@ def upload_image(request):
     except Patient.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Invalid patient'}, status=404)
 
-    # Unique file path
     file_ext = image.name.split('.')[-1]
     file_name = f"{patient.id}/{uuid.uuid4()}.{file_ext}"
-
-    # Upload to Supabase
     content = image.read()
-    
+
     try:
         supabase.storage.from_("images").upload(
             file_name,
@@ -53,10 +50,8 @@ def upload_image(request):
             'message': f'Failed to upload image: {str(e)}'
         }, status=500)
 
-    # Get public URL
     image_url = supabase.storage.from_("images").get_public_url(file_name)
 
-    # Create diagnosis linked to patient
     diagnosis = DiagnosisResult.objects.create(
         user=request.user if request.user.is_authenticated else None,
         patient=patient,
@@ -71,30 +66,30 @@ def upload_image(request):
             diagnosis.status = 'failed'
             diagnosis.error_message = 'OpenCV (cv2) not installed - cannot process image'
             diagnosis.save()
-            
+
             return JsonResponse({
                 'success': False,
                 'diagnosis_id': diagnosis.id,
                 'message': 'Image uploaded but processing unavailable (cv2 not installed)',
                 'status': diagnosis.status
             }, status=503)
-        
+
         # Decode image
         nparr = np.frombuffer(content, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
+
         if img is None:
             diagnosis.status = 'failed'
             diagnosis.error_message = 'Failed to decode image'
             diagnosis.save()
-            
+
             return JsonResponse({
                 'success': False,
                 'diagnosis_id': diagnosis.id,
                 'message': 'Failed to decode image',
                 'status': diagnosis.status
             }, status=500)
-        
+
         # Preprocess and predict
         pre = model_loader.preprocess_image(img)
         preds = model_loader.predict(pre)
@@ -121,7 +116,7 @@ def upload_image(request):
         diagnosis.lesion_boxes = lesion_boxes
         diagnosis.status = 'completed'
         diagnosis.save()
-        
+
         return JsonResponse({
             'success': True,
             'diagnosis_id': diagnosis.id,
@@ -133,17 +128,16 @@ def upload_image(request):
             'confidence_score': diagnosis.confidence_score,
             'lesion_boxes': diagnosis.lesion_boxes,
         })
-        
+
     except Exception as e:
-        # Log error and mark as failed
         error_trace = traceback.format_exc()
         print('Model inference error:', e)
         print(error_trace)
-        
+
         diagnosis.status = 'failed'
         diagnosis.error_message = f'{str(e)}\n\n{error_trace}'
         diagnosis.save()
-        
+
         return JsonResponse({
             'success': False,
             'diagnosis_id': diagnosis.id,
