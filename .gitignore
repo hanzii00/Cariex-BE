@@ -1,15 +1,28 @@
+# Environment variables
 .env
-*.pyc
-__pycache__/
-db.sqlite3
-.venv/
 
-# Ignore large model weights just in case
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# Django
+db.sqlite3
+*.log
+media/
+staticfiles/
+
+# ML model files (large weights)
 *.bin
 *.pt
 *.safetensors
 *.onnx
-media/
-venv/
-best_model.keras/
-best_model.keras
+*.h5
+*.keras
+
+# OS / misc
+.DS_Store
+Thumbs.db
