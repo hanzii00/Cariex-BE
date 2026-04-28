@@ -1,7 +1,6 @@
 from django.http import JsonResponse
 import traceback
 
-# Import cv2 lazily; optional in CI/test environments
 try:
     import cv2
 except Exception:
