@@ -11,3 +11,4 @@ db.sqlite3
 *.onnx
 media/
 venv/
+best_model.keras/
