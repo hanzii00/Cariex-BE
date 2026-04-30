@@ -11,14 +11,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from rest_framework.decorators import api_view, permission_classes  # ✅ Add this
-from rest_framework.permissions import IsAuthenticated  # ✅ Add this
-from rest_framework.response import Response  # ✅ Add this
-from rest_framework import status  # ✅ Add this
+from rest_framework.decorators import api_view, permission_classes 
+from rest_framework.permissions import IsAuthenticated 
+from rest_framework.response import Response  
+from rest_framework import status  
 import numpy as np
 import traceback
 
-# Import cv2 lazily; not required for listing/managing diagnoses
 try:
     import cv2
 except Exception:
@@ -27,15 +26,14 @@ except Exception:
 from ..models import DiagnosisResult
 from ..model_loader import model_loader
 
-@api_view(['GET'])  # ✅ Use DRF decorator instead of @require_http_methods
+@api_view(['GET'])  
 @permission_classes([IsAuthenticated])
 def get_all_diagnoses(request):
     """Return all diagnosis records for the authenticated user's patients"""
     try:
-        # ✅ Filter by logged-in dentist's patients
         diagnoses = DiagnosisResult.objects.filter(
-            patient__isnull=False,  # Only scans with a patient
-            patient__created_by=request.user  # Only YOUR patients
+            patient__isnull=False, 
+            patient__created_by=request.user 
         )
         
         results = []

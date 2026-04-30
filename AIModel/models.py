@@ -15,7 +15,6 @@ class DiagnosisResult(models.Model):
         ('failed', 'Failed'),
     ]
 
-    # Dentist / uploader
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -23,7 +22,6 @@ class DiagnosisResult(models.Model):
         blank=True
     )
 
-    # PATIENT LINK
     patient = models.ForeignKey(
         Patient,
         on_delete=models.SET_NULL,
@@ -31,23 +29,19 @@ class DiagnosisResult(models.Model):
         blank=True
     )
 
-    # Supabase image URL
     image_url = models.URLField(
         blank=True,
         null=True
     )
     
-    # Local image field (optional, for local storage)
     image = models.ImageField(upload_to='dental_images/', blank=True, null=True)
     
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
-    # AI results
     has_caries = models.BooleanField(default=False)
     severity = models.CharField(max_length=50, blank=True)
     confidence_score = models.FloatField(null=True)
     
-    # Teeth position detection (upper/lower/mixed)
     teeth_position = models.CharField(
         max_length=20,
         choices=[
@@ -63,17 +57,14 @@ class DiagnosisResult(models.Model):
 
     lesion_boxes = models.JSONField(null=True, blank=True)
 
-    # Processing state
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='pending'
     )
 
-    # Error tracking
     error_message = models.TextField(blank=True, null=True)
 
-    # Dentist validation
     verified_by_dentist = models.BooleanField(default=False)
     dentist_notes = models.TextField(blank=True)
 
