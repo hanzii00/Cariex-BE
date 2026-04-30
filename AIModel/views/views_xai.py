@@ -79,19 +79,19 @@ def _upload_to_supabase(supa_path, png_bytes, fallback_url):
 
 
 def _adaptive_has_caries(severity_result, predictions):
-    """
-    Determine has_caries using adaptive threshold so low-range UNet/model
-    outputs are not incorrectly classified as 'no caries'.
-    """
-    affected_pct = float(severity_result.get('affected_percentage', 0))
-    max_prob     = float(severity_result.get('max_probability', 0))
+    # For classification models (shape 1,N), use severity directly
+    if len(predictions.shape) == 2:
+        severity = severity_result.get('severity', 'Healthy')
+        confidence = float(severity_result.get('confidence', 0))
+        has_caries = severity.lower() != 'healthy'
+        affected_pct = confidence if has_caries else 0.0
+        return has_caries, affected_pct
 
-    # Adaptive: 50% of peak probability, floored at 0.05
-    mask = predictions[0, :, :, 0] if len(predictions.shape) == 4 else predictions
-    adaptive_threshold  = max(0.5 * float(np.max(mask)), 0.05)
-    adaptive_affected   = float(np.sum(mask > adaptive_threshold) / mask.size * 100)
-
-    return adaptive_affected > 1.0 or max_prob > 0.15, adaptive_affected
+    # For segmentation models (shape 1,H,W,1)
+    mask = predictions[0, :, :, 0]
+    adaptive_threshold = max(0.5 * float(np.max(mask)), 0.05)
+    adaptive_affected = float(np.sum(mask > adaptive_threshold) / mask.size * 100)
+    return adaptive_affected > 1.0, adaptive_affected
 
 
 # ─────────────────────────────────────────────────────────────────────────────

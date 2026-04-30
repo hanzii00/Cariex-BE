@@ -78,13 +78,13 @@ class ModelLoader:
             target_size = tuple(input_shape)
 
         if cv2 is None:
-            raise ImportError("OpenCV (cv2) is required for image preprocessing. Install opencv-python.")
+            raise ImportError("OpenCV (cv2) is required.")
 
         img_resized = cv2.resize(image_array, target_size)
-        img_normalized = img_resized.astype(np.float32) / 255.0
-        img_batch = np.expand_dims(img_normalized, axis=0)
+        # DO NOT normalize — EfficientNetB3 expects [0, 255]
+        # efficientnet.preprocess_input handles normalization internally
+        img_batch = np.expand_dims(img_resized.astype(np.float32), axis=0)
         return img_batch
-
     def predict(self, preprocessed_image):
         model = self.load_model()
         return model.predict(preprocessed_image, verbose=0)
@@ -93,51 +93,60 @@ class ModelLoader:
         predictions = np.array(predictions)
 
         if len(predictions.shape) == 4:
+            # Segmentation model
             segmentation_mask = predictions[0, :, :, 0]
-            threshold = 0.5
-            affected_pixels = np.sum(segmentation_mask > threshold)
+            max_prob = float(segmentation_mask.max())
+            mean_prob = float(segmentation_mask.mean())
+            adaptive_threshold = max(0.5 * max_prob, 0.05)
+            affected_pixels = np.sum(segmentation_mask > adaptive_threshold)
             total_pixels = segmentation_mask.size
             affected_percentage = (affected_pixels / total_pixels) * 100
-            mean_probability = segmentation_mask.mean()
-            max_probability = segmentation_mask.max()
 
             if affected_percentage < 1:
-                severity, confidence = 'Normal', (1 - mean_probability) * 100
+                severity, confidence = 'Healthy', (1 - mean_prob) * 100
             elif affected_percentage < 5:
-                severity, confidence = 'Mild', mean_probability * 100
-            elif affected_percentage < 15:
-                severity, confidence = 'Moderate', mean_probability * 100
+                severity, confidence = 'Moderate', mean_prob * 100
             else:
-                severity, confidence = 'Severe', mean_probability * 100
+                severity, confidence = 'Deep', mean_prob * 100
 
             return {
                 'severity': severity,
                 'confidence': min(confidence, 100.0),
+                'has_caries': severity.lower() != 'healthy',
                 'affected_percentage': affected_percentage,
-                'mean_probability': float(mean_probability),
-                'max_probability': float(max_probability),
+                'mean_probability': mean_prob,
+                'max_probability': max_prob,
                 'segmentation_mask': segmentation_mask
             }
 
         elif len(predictions.shape) == 2:
             pred = predictions[0]
-            severity_labels = ['Normal', 'Mild', 'Moderate', 'Severe']
+            severity_labels = ['Healthy', 'Moderate', 'Deep']   
             num_classes = pred.shape[0]
-            if num_classes < len(severity_labels):
-                severity_labels = severity_labels[:num_classes]
+            severity_labels = severity_labels[:num_classes]
 
             severity_index = int(np.argmax(pred))
             confidence = float(pred[severity_index]) * 100
+            severity = severity_labels[severity_index]
+            has_caries = severity.lower() != 'healthy'
 
             return {
-                'severity': severity_labels[severity_index],
+                'severity': severity,
                 'confidence': confidence,
-                'all_probabilities': [float(p) * 100 for p in pred]
+                'has_caries': has_caries,
+                'all_probabilities': [float(p) * 100 for p in pred],
+                'affected_percentage': 0.0 if not has_caries else confidence,
+                'mean_probability': float(np.mean(pred)),
+                'max_probability': float(np.max(pred)),
             }
 
         return {
             'severity': 'Unknown',
             'confidence': 0.0,
+            'has_caries': False,
+            'affected_percentage': 0.0,
+            'mean_probability': 0.0,
+            'max_probability': 0.0,
             'error': f'Unexpected prediction shape: {predictions.shape}'
         }
 

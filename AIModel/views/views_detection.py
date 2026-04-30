@@ -40,7 +40,7 @@ def detect_caries(request, diagnosis_id):
                 min_area=50
             )
 
-        has_caries = severity_result['severity'].lower() not in ['normal', 'class_0']
+        has_caries = severity_result['severity'].lower() not in ['healthy', 'class_0']
         diagnosis.lesion_boxes = bounding_boxes
         diagnosis.has_caries = has_caries
         diagnosis.status = 'detected'
