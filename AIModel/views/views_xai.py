@@ -87,14 +87,12 @@ def _adaptive_has_caries(severity_result, predictions):
         affected_pct = confidence if has_caries else 0.0
         return has_caries, affected_pct
 
-    # For segmentation models (shape 1,H,W,1)
     mask = predictions[0, :, :, 0]
     adaptive_threshold = max(0.5 * float(np.max(mask)), 0.05)
     adaptive_affected = float(np.sum(mask > adaptive_threshold) / mask.size * 100)
     return adaptive_affected > 1.0, adaptive_affected
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 
 def explain_diagnosis(request, diagnosis_id):
     if not HAVE_MATPLOTLIB:
@@ -202,7 +200,6 @@ def explain_diagnosis(request, diagnosis_id):
             status=500)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 
 def quick_xai_overlay(request, diagnosis_id):
     try:
@@ -257,7 +254,6 @@ def quick_xai_overlay(request, diagnosis_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 
 def get_gradcam(request, diagnosis_id):
     try:

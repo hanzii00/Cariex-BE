@@ -81,8 +81,7 @@ class ModelLoader:
             raise ImportError("OpenCV (cv2) is required.")
 
         img_resized = cv2.resize(image_array, target_size)
-        # DO NOT normalize — EfficientNetB3 expects [0, 255]
-        # efficientnet.preprocess_input handles normalization internally
+
         img_batch = np.expand_dims(img_resized.astype(np.float32), axis=0)
         return img_batch
     def predict(self, preprocessed_image):
@@ -93,7 +92,6 @@ class ModelLoader:
         predictions = np.array(predictions)
 
         if len(predictions.shape) == 4:
-            # Segmentation model
             segmentation_mask = predictions[0, :, :, 0]
             max_prob = float(segmentation_mask.max())
             mean_prob = float(segmentation_mask.mean())

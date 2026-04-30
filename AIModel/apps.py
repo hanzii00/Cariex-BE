@@ -7,8 +7,7 @@ class AimodelConfig(AppConfig):
     name = 'AIModel'
 
     def ready(self):
-        # Preload ML model only when explicitly enabled.
-        # Avoid loading in CI or environments where TensorFlow isn't available.
+
         preload_env = os.getenv('PRELOAD_AI_MODEL', 'false').lower()
         ci_env = os.getenv('CI', '').lower()
 

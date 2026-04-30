@@ -59,10 +59,8 @@ def upload_image(request):
         status='processing'
     )
 
-    # Run model inference synchronously on the uploaded image bytes
     try:
         if cv2 is None:
-            # OpenCV not available; mark as failed
             diagnosis.status = 'failed'
             diagnosis.error_message = 'OpenCV (cv2) not installed - cannot process image'
             diagnosis.save()
@@ -74,7 +72,6 @@ def upload_image(request):
                 'status': diagnosis.status
             }, status=503)
 
-        # Decode image
         nparr = np.frombuffer(content, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
@@ -90,12 +87,10 @@ def upload_image(request):
                 'status': diagnosis.status
             }, status=500)
 
-        # Preprocess and predict
         pre = model_loader.preprocess_image(img)
         preds = model_loader.predict(pre)
         result = model_loader.classify_severity(preds)
 
-        # Determine has_caries and confidence
         severity = result.get('severity')
         confidence = result.get('confidence') or result.get('confidence_score') or 0.0
 
@@ -104,12 +99,10 @@ def upload_image(request):
         else:
             has_caries = severity is not None and severity.lower() not in ['normal', 'class_0']
 
-        # Generate bounding boxes
         lesion_boxes = None
         if 'segmentation_mask' in result and result['segmentation_mask'] is not None:
             lesion_boxes = model_loader.generate_bounding_boxes(result['segmentation_mask'])
 
-        # Update diagnosis with results
         diagnosis.has_caries = bool(has_caries)
         diagnosis.severity = severity or ''
         diagnosis.confidence_score = float(confidence) if confidence is not None else None

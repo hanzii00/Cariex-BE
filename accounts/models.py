@@ -10,19 +10,15 @@ class DentistProfile(models.Model):
         on_delete=models.CASCADE,
         related_name="profile"
     )
-    # Basic info
     first_name = models.CharField(max_length=100, blank=True)
     last_name = models.CharField(max_length=100, blank=True)
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
     
-    # Supabase Storage URL
     avatar_url = models.URLField(blank=True, null=True)
 
-    # Professional
     education = models.TextField(blank=True)
     bio = models.TextField(blank=True)
 
-    # Contact
     phone = models.CharField(max_length=30, blank=True)
     office_location = models.CharField(max_length=255, blank=True)
 
