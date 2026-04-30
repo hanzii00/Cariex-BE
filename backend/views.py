@@ -14,8 +14,8 @@ def health_check(request):
 @csrf_exempt
 @require_http_methods(["GET", "HEAD", "OPTIONS"])
 def keepalive(request):
-    try:
-        from utils import supabase  # import here, not at module level
+    try:    
+        from utils import supabase  
         resp = supabase.table("keepalive").select("id").limit(1).execute()
         if hasattr(resp, "error") and resp.error:
             return JsonResponse({"status": "error", "detail": str(resp.error)}, status=500)

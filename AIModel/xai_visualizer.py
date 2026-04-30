@@ -34,7 +34,6 @@ class XAIVisualizer:
             raise ImportError('OpenCV (cv2) is required for XAI visualization')
         self.model = model
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
 
     def _is_segmentation_model(self, predictions):
         """True if predictions are a spatial mask (4-D), False if classification (2-D)."""
@@ -50,7 +49,6 @@ class XAIVisualizer:
         produces accurate affected-area readings.
         """
         max_prob = float(np.max(mask))
-        # Floor at 0.05 so near-zero outputs don't produce a threshold of ~0
         return max(0.5 * max_prob, 0.05)
 
     def _debug_mask(self, mask, label="mask"):
@@ -67,7 +65,6 @@ class XAIVisualizer:
         print(f"  % > T       : {pct:.2f}%")
         print("=" * 30)
 
-    # ── Grad-CAM ──────────────────────────────────────────────────────────────
 
     def generate_gradcam(self, image, layer_name=None):
         if not HAVE_TENSORFLOW:
@@ -145,7 +142,6 @@ class XAIVisualizer:
 
         return cv2.addWeighted(original_image, 1 - alpha, heatmap_colored, alpha, 0)
 
-    # ── Segmentation overlay ──────────────────────────────────────────────────
 
     def visualize_segmentation_overlay(self, original_image, segmentation_mask, threshold=None):
         """
@@ -171,7 +167,6 @@ class XAIVisualizer:
         else:
             original_image_uint8 = original_image.copy()
 
-        # Use adaptive threshold unless the caller explicitly passes one
         if threshold is None:
             threshold = self._adaptive_threshold(mask_resized)
 
@@ -183,12 +178,10 @@ class XAIVisualizer:
         colored_mask = np.zeros((*mask_resized.shape, 3), dtype=np.uint8)
 
         if has_detection:
-            # Red channel → definite caries pixels
             caries_regions = mask_resized > threshold
             colored_mask[:, :, 0] = np.where(
                 caries_regions, (mask_resized * 255).astype(np.uint8), 0)
 
-            # Orange/yellow → borderline pixels (between 30 % and 100 % of threshold)
             warning_regions = (mask_resized > threshold * 0.3) & (mask_resized <= threshold)
             colored_mask[:, :, 0] = np.where(
                 warning_regions,
@@ -201,7 +194,6 @@ class XAIVisualizer:
         overlayed = cv2.addWeighted(original_image_uint8, 0.4, colored_mask, 0.6, 0)
         return overlayed, colored_mask
 
-    # ── Full XAI report ───────────────────────────────────────────────────────
 
     def create_explanation_report(self, original_image, preprocessed_image,
                                   segmentation_mask, severity_result):
@@ -224,14 +216,12 @@ class XAIVisualizer:
         title_kw  = dict(color='white', fontsize=10, pad=6)
         border_kw = dict(color='#334155', linewidth=1.5)
 
-        # ── [0,0] Original ────────────────────────────────────────────────────
         axes[0, 0].imshow(original_image)
         axes[0, 0].set_title('Original Peri-apical X-ray', **title_kw)
         axes[0, 0].axis('off')
         for spine in axes[0, 0].spines.values():
             spine.set(**border_kw)
 
-        # ── [0,1] Probability heatmap / class bar chart ───────────────────────
         if is_segmentation:
             mask_2d = segmentation_mask[0, :, :, 0]
             im = axes[0, 1].imshow(mask_2d, cmap='hot', vmin=0, vmax=mask_2d.max() or 1)
@@ -253,7 +243,6 @@ class XAIVisualizer:
         for spine in axes[0, 1].spines.values():
             spine.set(**border_kw)
 
-        # ── [0,2] Overlay with adaptive threshold ─────────────────────────────
         if is_segmentation:
             mask_2d            = segmentation_mask[0, :, :, 0]
             adaptive_threshold = self._adaptive_threshold(mask_2d)
@@ -288,7 +277,6 @@ class XAIVisualizer:
         for spine in axes[0, 2].spines.values():
             spine.set(**border_kw)
 
-        # ── [1,0] Grad-CAM ────────────────────────────────────────────────────
         try:
             gradcam         = self.generate_gradcam(preprocessed_image)
             gradcam_overlay = self.overlay_heatmap(gradcam, original_image)
@@ -302,7 +290,6 @@ class XAIVisualizer:
         for spine in axes[1, 0].spines.values():
             spine.set(**border_kw)
 
-        # ── [1,1] Binary mask / confidence dial ───────────────────────────────
         if is_segmentation:
             mask_2d     = segmentation_mask[0, :, :, 0]
             binary_mask = (mask_2d > adaptive_threshold).astype(np.uint8) * 255
@@ -310,7 +297,6 @@ class XAIVisualizer:
             axes[1, 1].set_title(
                 f'Binary Mask  (adaptive threshold = {adaptive_threshold:.3f})', **title_kw)
         else:
-            # Confidence gauge
             theta = np.linspace(0, np.pi, 200)
             axes[1, 1].plot(np.cos(theta), np.sin(theta), '#334155', lw=10)
             angle = np.pi * (1 - confidence / 100)
@@ -327,7 +313,6 @@ class XAIVisualizer:
         for spine in axes[1, 1].spines.values():
             spine.set(**border_kw)
 
-        # ── [1,2] Statistics panel ────────────────────────────────────────────
         affected_pct = float(severity_result.get('affected_percentage', affected_pixels))
         mean_prob    = float(severity_result.get('mean_probability', 0))
         max_prob_val = float(severity_result.get('max_probability', 0))
@@ -384,7 +369,6 @@ class XAIVisualizer:
         plt.tight_layout(rect=[0, 0, 1, 0.97])
         return fig
 
-    # ── Save ──────────────────────────────────────────────────────────────────
 
     def save_explanation(self, fig, output_path):
         if not HAVE_MATPLOTLIB or plt is None:
@@ -392,7 +376,6 @@ class XAIVisualizer:
         fig.savefig(output_path, dpi=150, bbox_inches='tight', facecolor=fig.get_facecolor())
 
 
-# ── Legacy helper ─────────────────────────────────────────────────────────────
 
 def generate_xai_explanation(diagnosis_id):
     """Legacy helper kept for backwards compatibility."""

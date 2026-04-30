@@ -1,6 +1,3 @@
-# DentistFeedback/models.py
-# New separate Django app for feedback system
-
 from django.db import models
 from django.conf import settings
 
@@ -38,7 +35,6 @@ class ValidationStatus(models.Model):
     
     validated_at = models.DateTimeField(null=True, blank=True)
     
-    # Additional tracking
     validation_priority = models.IntegerField(
         default=0,
         help_text="Higher number = higher priority for review"
@@ -77,12 +73,10 @@ class DentistFeedback(models.Model):
         related_name='feedback_submissions'
     )
     
-    # Validation decision
     is_correct = models.BooleanField(
         help_text="Is the AI prediction correct?"
     )
     
-    # Corrected values (if AI was wrong)
     corrected_has_caries = models.BooleanField(null=True, blank=True)
     
     corrected_severity = models.CharField(
@@ -97,20 +91,17 @@ class DentistFeedback(models.Model):
         blank=True
     )
     
-    # Detailed feedback
     feedback_text = models.TextField(
         blank=True,
         help_text="Additional comments or observations"
     )
     
-    # Bounding box corrections (JSON)
     corrected_boxes = models.JSONField(
         null=True,
         blank=True,
         help_text="Corrected or additional bounding boxes"
     )
     
-    # Rating of AI performance (1-5)
     ai_performance_rating = models.IntegerField(
         choices=[(i, str(i)) for i in range(1, 6)],
         null=True,
@@ -118,11 +109,9 @@ class DentistFeedback(models.Model):
         help_text="Rate AI accuracy (1=Poor, 5=Excellent)"
     )
     
-    # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    # Clinical notes
     clinical_findings = models.TextField(
         blank=True,
         help_text="Clinical examination findings"
@@ -133,7 +122,6 @@ class DentistFeedback(models.Model):
         help_text="Recommended treatment plan"
     )
     
-    # Confidence in feedback
     confidence_level = models.CharField(
         max_length=20,
         choices=[
@@ -144,7 +132,6 @@ class DentistFeedback(models.Model):
         default='high'
     )
     
-    # Review status
     is_reviewed = models.BooleanField(
         default=False,
         help_text="Has this feedback been reviewed by senior dentist?"
@@ -230,7 +217,6 @@ class FeedbackComment(models.Model):
     
     updated_at = models.DateTimeField(auto_now=True)
     
-    # Optional: Reply to another comment
     parent_comment = models.ForeignKey(
         'self',
         on_delete=models.CASCADE,
@@ -287,11 +273,9 @@ class ModelPerformanceMetric(models.Model):
     """
     calculated_at = models.DateTimeField(auto_now_add=True)
     
-    # Time period for these metrics
     period_start = models.DateTimeField()
     period_end = models.DateTimeField()
     
-    # Aggregate metrics
     total_diagnoses = models.IntegerField(default=0)
     total_feedback = models.IntegerField(default=0)
     correct_predictions = models.IntegerField(default=0)
@@ -303,10 +287,8 @@ class ModelPerformanceMetric(models.Model):
     
     average_rating = models.FloatField(default=0.0)
     
-    # Severity-specific accuracy (JSON)
     severity_metrics = models.JSONField(default=dict)
     
-    # Category breakdown (JSON)
     category_breakdown = models.JSONField(default=dict)
     
     class Meta:

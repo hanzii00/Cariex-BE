@@ -15,9 +15,6 @@ from django.db.models.functions import TruncDate
 from django.db.models import Count
 from AIModel.models import DiagnosisResult
 
-
-# ============ PATIENT VIEWS ============
-
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def patient_list_create(request):
@@ -27,10 +24,8 @@ def patient_list_create(request):
     """
     
     if request.method == 'GET':
-        # Get all patients created by the authenticated user
         patients = Patient.objects.filter(created_by=request.user)
         
-        # Search by name
         search = request.query_params.get('search', None)
         if search:
             patients = patients.filter(
@@ -38,7 +33,6 @@ def patient_list_create(request):
                 Q(last_name__icontains=search)
             )
         
-        # Filter by age
         min_age = request.query_params.get('min_age', None)
         max_age = request.query_params.get('max_age', None)
         
@@ -47,16 +41,13 @@ def patient_list_create(request):
             today = timezone.now().date()
             
             if max_age:
-                # Calculate birth date for minimum age
                 min_birth_date = today.replace(year=today.year - int(max_age) - 1)
                 patients = patients.filter(date_of_birth__gte=min_birth_date)
             
             if min_age:
-                # Calculate birth date for maximum age
                 max_birth_date = today.replace(year=today.year - int(min_age))
                 patients = patients.filter(date_of_birth__lte=max_birth_date)
         
-        # Sorting
         sort_by = request.query_params.get('sort_by', 'created_at')
         order = request.query_params.get('order', 'desc')
         
@@ -66,7 +57,7 @@ def patient_list_create(request):
             'first_name': 'first_name',
             'created_at': 'created_at',
             'last_visit': 'last_visit',
-            'age': 'date_of_birth',  # Sort by DOB for age (inverse)
+            'age': 'date_of_birth',  
         }
         
         sort_field = valid_sort_fields.get(sort_by, 'created_at')
@@ -134,8 +125,6 @@ def patient_detail(request, pk):
         )
 
 
-# ============ RECORD VIEWS ============
-
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def record_list_create(request):
@@ -145,20 +134,16 @@ def record_list_create(request):
     """
     
     if request.method == 'GET':
-        # Get records for patients created by the authenticated user
         records = Record.objects.filter(patient__created_by=request.user)
         
-        # Filter by patient
         patient_id = request.query_params.get('patient_id', None)
         if patient_id:
             records = records.filter(patient_id=patient_id)
         
-        # Filter by record type
         record_type = request.query_params.get('record_type', None)
         if record_type:
             records = records.filter(record_type=record_type)
         
-        # Search by title or description
         search = request.query_params.get('search', None)
         if search:
             records = records.filter(
@@ -166,7 +151,6 @@ def record_list_create(request):
                 Q(description__icontains=search)
             )
         
-        # Sorting
         sort_by = request.query_params.get('sort_by', 'visit_date')
         order = request.query_params.get('order', 'desc')
         
@@ -182,7 +166,6 @@ def record_list_create(request):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     elif request.method == 'POST':
-        # Verify that the patient belongs to the authenticated user
         patient_id = request.data.get('patient')
         if not patient_id:
             return Response(
@@ -259,7 +242,6 @@ def patient_records(request, patient_id):
     patient = get_object_or_404(Patient, pk=patient_id, created_by=request.user)
     records = Record.objects.filter(patient=patient)
     
-    # Filter by record type
     record_type = request.query_params.get('record_type', None)
     if record_type:
         records = records.filter(record_type=record_type)
@@ -318,23 +300,20 @@ def scans_activity(request):
         end_date = timezone.now().date()
         start_date = end_date - timedelta(days=days - 1)
 
-        # Get scans for patients that belong to this user
         user_patient_ids = Patient.objects.filter(
             created_by=request.user
         ).values_list('id', flat=True)
 
-        # Filter scans by patients owned by this user
         qs = DiagnosisResult.objects.filter(
             uploaded_at__date__gte=start_date,
             uploaded_at__date__lte=end_date,
-            patient_id__in=user_patient_ids  # Filter by patient ownership
+            patient_id__in=user_patient_ids  
         )
 
         daily_qs = qs.annotate(day=TruncDate('uploaded_at')).values('day').annotate(count=Count('id')).order_by('day')
 
         counts_map = {item['day'].isoformat(): item['count'] for item in daily_qs}
 
-        # Fill missing dates with zeros
         data = []
         current = start_date
         while current <= end_date:

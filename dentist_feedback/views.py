@@ -41,7 +41,6 @@ def submit_feedback(request, diagnosis_id):
                 'error': 'is_correct field is required'
             }, status=400)
         
-        # Create feedback
         feedback = DentistFeedback.objects.create(
             diagnosis=diagnosis,
             dentist=request.user,
@@ -56,7 +55,6 @@ def submit_feedback(request, diagnosis_id):
             confidence_level=data.get('confidence_level', 'high')
         )
         
-        # Add categories
         categories = data.get('categories', [])
         for category_type in categories:
             FeedbackCategory.objects.create(
@@ -65,7 +63,6 @@ def submit_feedback(request, diagnosis_id):
                 notes=data.get(f'{category_type}_notes', '')
             )
         
-        # Update or create validation status
         validation, created = ValidationStatus.objects.get_or_create(
             diagnosis=diagnosis,
             defaults={
@@ -149,7 +146,6 @@ def get_feedback(request, diagnosis_id):
                 'updated_at': feedback.updated_at.isoformat()
             })
         
-        # Get validation status
         try:
             validation = ValidationStatus.objects.get(diagnosis=diagnosis)
             validation_data = {
@@ -203,7 +199,6 @@ def update_feedback(request, feedback_id):
         
         data = json.loads(request.body)
         
-        # Update fields
         updatable_fields = [
             'is_correct', 'corrected_has_caries', 'corrected_severity',
             'feedback_text', 'corrected_boxes', 'ai_performance_rating',
@@ -253,7 +248,6 @@ def delete_feedback(request, feedback_id):
         diagnosis = feedback.diagnosis
         feedback.delete()
         
-        # Update validation status if no more feedback
         if not DentistFeedback.objects.filter(diagnosis=diagnosis).exists():
             try:
                 validation = ValidationStatus.objects.get(diagnosis=diagnosis)
@@ -324,7 +318,6 @@ def pending_validations(request):
     Get list of diagnoses pending validation
     """
     try:
-        # Get completed diagnoses without validation or with pending status
         validated_ids = ValidationStatus.objects.exclude(
             validation_status='pending'
         ).values_list('diagnosis_id', flat=True)
@@ -335,7 +328,6 @@ def pending_validations(request):
             id__in=validated_ids
         ).order_by('-uploaded_at')
         
-        # Pagination
         page = int(request.GET.get('page', 1))
         per_page = int(request.GET.get('per_page', 20))
         start = (page - 1) * per_page
@@ -392,26 +384,21 @@ def feedback_statistics(request):
                 }
             })
         
-        # Validation status breakdown
         validation_stats = ValidationStatus.objects.values('validation_status').annotate(
             count=Count('diagnosis')
         )
         
-        # AI accuracy
         correct_predictions = DentistFeedback.objects.filter(is_correct=True).count()
         accuracy = (correct_predictions / total_feedback * 100)
         
-        # Average rating
         avg_rating = DentistFeedback.objects.aggregate(
             avg_rating=Avg('ai_performance_rating')
         )['avg_rating'] or 0
         
-        # Category breakdown
         category_stats = FeedbackCategory.objects.values('category').annotate(
             count=Count('id')
         )
         
-        # Severity-specific accuracy
         severity_accuracy = {}
         for severity in ['Normal', 'Mild', 'Moderate', 'Severe']:
             severity_correct = DentistFeedback.objects.filter(
@@ -430,7 +417,6 @@ def feedback_statistics(request):
                     'correct_cases': severity_correct
                 }
         
-        # Recent feedback trends (last 30 days)
         from datetime import timedelta
         thirty_days_ago = timezone.now() - timedelta(days=30)
         recent_feedback = DentistFeedback.objects.filter(
@@ -479,17 +465,14 @@ def dentist_dashboard(request):
                 'error': 'Authentication required'
             }, status=401)
         
-        # Dentist's feedback history
         my_feedback = DentistFeedback.objects.filter(
             dentist=request.user
         ).order_by('-created_at')[:10]
         
-        # Validations by this dentist
         validated_by_me = ValidationStatus.objects.filter(
             validated_by=request.user
         ).count()
         
-        # My accuracy contribution
         my_correct = DentistFeedback.objects.filter(
             dentist=request.user,
             is_correct=True
