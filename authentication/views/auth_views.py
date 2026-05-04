@@ -77,7 +77,7 @@ def register(request):
         email = EmailMultiAlternatives(
             subject='Confirm Your Email',
             body=text_content,
-            from_email='Cariex Support',
+            from_email='Cariex Support <bhanzchester@email.com>',
             to=[user.email]
         )
         email.attach_alternative(html_content, "text/html")
