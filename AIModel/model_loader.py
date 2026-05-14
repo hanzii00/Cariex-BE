@@ -1,7 +1,10 @@
-try:
-    import tensorflow as tf
-except ImportError:
-    tf = None
+def _import_tensorflow():
+    try:
+        import tensorflow as tf
+        return tf
+    except ImportError:
+        return None
+
 import numpy as np
 from pathlib import Path
 import os
@@ -53,6 +56,7 @@ class ModelLoader:
 
     def load_model(self):
         if self._model is None:
+            tf = _import_tensorflow()
             if tf is None:
                 raise ImportError(
                     "TensorFlow is not installed. Install tensorflow to use the AIModel features."
@@ -114,12 +118,14 @@ class ModelLoader:
                 'affected_percentage': affected_percentage,
                 'mean_probability': mean_prob,
                 'max_probability': max_prob,
-                'segmentation_mask': segmentation_mask
+                'segmentation_mask': segmentation_mask,
             }
 
         elif len(predictions.shape) == 2:
             pred = predictions[0]
-            severity_labels = ['Healthy', 'Moderate', 'Deep']   
+
+            # ✅ FIX 1: expose label order so XAIVisualizer never has to guess
+            severity_labels = ['Healthy', 'Moderate', 'Deep']
             num_classes = pred.shape[0]
             severity_labels = severity_labels[:num_classes]
 
@@ -132,8 +138,9 @@ class ModelLoader:
                 'severity': severity,
                 'confidence': confidence,
                 'has_caries': has_caries,
+                'class_labels': severity_labels,                    # ✅ FIX 1: added
                 'all_probabilities': [float(p) * 100 for p in pred],
-                'affected_percentage': 0.0 if not has_caries else confidence,
+                'affected_percentage': 0.0,                        # ✅ FIX 2: was wrongly set to confidence (83.7%)
                 'mean_probability': float(np.mean(pred)),
                 'max_probability': float(np.max(pred)),
             }
@@ -145,7 +152,7 @@ class ModelLoader:
             'affected_percentage': 0.0,
             'mean_probability': 0.0,
             'max_probability': 0.0,
-            'error': f'Unexpected prediction shape: {predictions.shape}'
+            'error': f'Unexpected prediction shape: {predictions.shape}',
         }
 
     def generate_bounding_boxes(self, segmentation_mask, threshold=0.5, min_area=100):
