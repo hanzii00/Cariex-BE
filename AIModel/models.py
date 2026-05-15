@@ -41,6 +41,8 @@ class DiagnosisResult(models.Model):
     has_caries = models.BooleanField(default=False)
     severity = models.CharField(max_length=50, blank=True)
     confidence_score = models.FloatField(null=True)
+    all_probabilities = models.JSONField(null=True, blank=True, default=list)
+    class_labels = models.JSONField(null=True, blank=True, default=list)
     
     teeth_position = models.CharField(
         max_length=20,

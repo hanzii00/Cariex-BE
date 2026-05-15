@@ -106,6 +106,8 @@ def upload_image(request):
         diagnosis.has_caries = bool(has_caries)
         diagnosis.severity = severity or ''
         diagnosis.confidence_score = float(confidence) if confidence is not None else None
+        diagnosis.all_probabilities = result.get('all_probabilities', [])
+        diagnosis.class_labels = result.get('class_labels', [])
         diagnosis.lesion_boxes = lesion_boxes
         diagnosis.status = 'completed'
         diagnosis.save()

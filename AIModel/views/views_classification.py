@@ -45,6 +45,8 @@ def classify_severity(request, diagnosis_id):
 
         diagnosis.severity = severity_result['severity']
         diagnosis.confidence_score = severity_result['confidence']
+        diagnosis.all_probabilities = severity_result.get('all_probabilities', [])
+        diagnosis.class_labels = severity_result.get('class_labels', [])
         diagnosis.status = 'completed'
         diagnosis.save()
 

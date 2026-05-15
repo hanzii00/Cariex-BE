@@ -100,6 +100,7 @@ def _severity_result_from_db(diagnosis: DiagnosisResult) -> dict:
         # Store as JSON list on the model if you want per-class bars;
         # falls back to empty list gracefully.
         'all_probabilities':  getattr(diagnosis, 'all_probabilities', []) or [],
+        'class_labels':       getattr(diagnosis, 'class_labels', []) or [],
     }
 
 
@@ -337,6 +338,8 @@ def get_gradcam(request, diagnosis_id):
             # ✅ Consistent with Results tab
             'severity':            severity_result['severity'],
             'confidence':          severity_result['confidence'],
+            'probabilities':       severity_result.get('all_probabilities', []),
+            'class_labels':        severity_result.get('class_labels', []),
             'has_caries':          bool(has_caries),
             'affected_percentage': adaptive_affected,
             'description':         description,
@@ -347,4 +350,4 @@ def get_gradcam(request, diagnosis_id):
             {'success': False, 'error': f'Diagnosis with id {diagnosis_id} not found'},
             status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)    
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
