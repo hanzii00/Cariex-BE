@@ -20,6 +20,8 @@ except ImportError:
 class ModelLoader:
     _instance = None
     _model = None
+    _grad_model = None
+    _last_grad_layer = None
 
     def __new__(cls):
         if cls._instance is None:
@@ -36,18 +38,15 @@ class ModelLoader:
         return url
 
     def download_model_if_needed(self, model_path):
-        """Download model from AWS S3 if it doesn't exist locally"""
         if model_path.exists():
             print(f"Model already exists at {model_path}")
             return
 
         print(f"Downloading model from AWS S3...")
-
         try:
             model_path.parent.mkdir(parents=True, exist_ok=True)
             urllib.request.urlretrieve(self.aws_model_url, str(model_path))
             print(f"Model downloaded successfully to {model_path}")
-
         except Exception as e:
             print(f"Error downloading model: {e}")
             if model_path.exists():
@@ -63,7 +62,6 @@ class ModelLoader:
                 )
 
             model_path = Path(__file__).parent / 'ml_models' / 'new_model.keras'
-
             self.download_model_if_needed(model_path)
 
             if not model_path.exists():
@@ -75,6 +73,19 @@ class ModelLoader:
 
         return self._model
 
+    def load_grad_model(self, layer_name):
+        if self._grad_model is None or self._last_grad_layer != layer_name:
+            tf = _import_tensorflow()
+            model = self.load_model()
+            print(f"Building grad model for layer: {layer_name}")
+            self._grad_model = tf.keras.models.Model(
+                inputs=[model.inputs],
+                outputs=[model.get_layer(layer_name).output, model.output]
+            )
+            self._last_grad_layer = layer_name
+            print("Grad model built and cached")
+        return self._grad_model
+
     def preprocess_image(self, image_array, target_size=None):
         model = self.load_model()
         if target_size is None:
@@ -85,9 +96,9 @@ class ModelLoader:
             raise ImportError("OpenCV (cv2) is required.")
 
         img_resized = cv2.resize(image_array, target_size)
-
         img_batch = np.expand_dims(img_resized.astype(np.float32), axis=0)
         return img_batch
+
     def predict(self, preprocessed_image):
         model = self.load_model()
         return model.predict(preprocessed_image, verbose=0)
@@ -123,8 +134,6 @@ class ModelLoader:
 
         elif len(predictions.shape) == 2:
             pred = predictions[0]
-
-            # ✅ FIX 1: expose label order so XAIVisualizer never has to guess
             severity_labels = ['Healthy', 'Moderate', 'Deep']
             num_classes = pred.shape[0]
             severity_labels = severity_labels[:num_classes]
@@ -138,9 +147,9 @@ class ModelLoader:
                 'severity': severity,
                 'confidence': confidence,
                 'has_caries': has_caries,
-                'class_labels': severity_labels,                    # ✅ FIX 1: added
+                'class_labels': severity_labels,
                 'all_probabilities': [float(p) * 100 for p in pred],
-                'affected_percentage': 0.0,                        # ✅ FIX 2: was wrongly set to confidence (83.7%)
+                'affected_percentage': 0.0,
                 'mean_probability': float(np.mean(pred)),
                 'max_probability': float(np.max(pred)),
             }
@@ -157,7 +166,7 @@ class ModelLoader:
 
     def generate_bounding_boxes(self, segmentation_mask, threshold=0.5, min_area=100):
         if cv2 is None:
-            raise ImportError("OpenCV (cv2) is required for bounding box generation. Install opencv-python.")
+            raise ImportError("OpenCV (cv2) is required for bounding box generation.")
 
         binary_mask = (segmentation_mask > threshold).astype(np.uint8) * 255
         contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
