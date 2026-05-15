@@ -62,7 +62,7 @@ class ModelLoader:
                     "TensorFlow is not installed. Install tensorflow to use the AIModel features."
                 )
 
-            model_path = Path(__file__).parent / 'ml_models' / 'best_model.keras'
+            model_path = Path(__file__).parent / 'ml_models' / 'new_model.keras'
 
             self.download_model_if_needed(model_path)
 
