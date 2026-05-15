@@ -22,6 +22,7 @@ staticfiles/
 *.onnx
 *.h5
 *.keras
+!AIModel/ml_models/new_model.keras
 
 # OS / misc
 .DS_Store
