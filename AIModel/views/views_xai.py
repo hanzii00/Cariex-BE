@@ -28,6 +28,10 @@ except Exception:
     cv2 = None
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Helpers
+# ──────────────────────────────────────────────────────────────────────────────
+
 def _load_image_and_output_dir(diagnosis: DiagnosisResult):
     media_root = getattr(settings, "MEDIA_ROOT", None)
 
@@ -78,21 +82,52 @@ def _upload_to_supabase(supa_path, png_bytes, fallback_url):
             return fallback_url
 
 
-def _adaptive_has_caries(severity_result, predictions):
-    # For classification models (shape 1,N), use severity directly
+def _severity_result_from_db(diagnosis: DiagnosisResult) -> dict:
+    """
+    Build a severity_result dict from the values already stored on the
+    DiagnosisResult row.  This guarantees that every XAI endpoint shows
+    exactly the same confidence/severity as the Results tab, regardless of
+    any non-determinism in a fresh model forward pass.
+
+    Fields that don't exist on the model yet gracefully fall back to 0 / [].
+    """
+    return {
+        'severity':           diagnosis.severity or 'N/A',
+        'confidence':         float(getattr(diagnosis, 'confidence_score', 0) or 0),
+        'affected_percentage': float(getattr(diagnosis, 'affected_percentage', 0) or 0),
+        'mean_probability':   float(getattr(diagnosis, 'mean_probability', 0) or 0),
+        'max_probability':    float(getattr(diagnosis, 'max_probability', 0) or 0),
+        # Store as JSON list on the model if you want per-class bars;
+        # falls back to empty list gracefully.
+        'all_probabilities':  getattr(diagnosis, 'all_probabilities', []) or [],
+    }
+
+
+def _adaptive_has_caries(severity_result: dict, predictions: np.ndarray):
+    """
+    Derive has_caries / adaptive_affected from stored severity_result.
+
+    For classification models the mask shape is (1, N) so we use severity.
+    For segmentation models (1, H, W, 1) we re-threshold the predictions
+    — the predictions tensor is still needed here because the DB only stores
+    the scalar summary, not the full pixel mask.
+    """
     if len(predictions.shape) == 2:
-        severity = severity_result.get('severity', 'Healthy')
-        confidence = float(severity_result.get('confidence', 0))
-        has_caries = severity.lower() != 'healthy'
+        severity     = severity_result.get('severity', 'Healthy')
+        confidence   = float(severity_result.get('confidence', 0))
+        has_caries   = severity.lower() != 'healthy'
         affected_pct = confidence if has_caries else 0.0
         return has_caries, affected_pct
 
-    mask = predictions[0, :, :, 0]
+    mask               = predictions[0, :, :, 0]
     adaptive_threshold = max(0.5 * float(np.max(mask)), 0.05)
-    adaptive_affected = float(np.sum(mask > adaptive_threshold) / mask.size * 100)
+    adaptive_affected  = float(np.sum(mask > adaptive_threshold) / mask.size * 100)
     return adaptive_affected > 1.0, adaptive_affected
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Views
+# ──────────────────────────────────────────────────────────────────────────────
 
 def explain_diagnosis(request, diagnosis_id):
     if not HAVE_MATPLOTLIB:
@@ -109,18 +144,20 @@ def explain_diagnosis(request, diagnosis_id):
             return JsonResponse({"success": False, "error": output_dir_or_error}, status=500)
         output_dir = output_dir_or_error
 
+        # Run inference — still needed for Grad-CAM gradient tape and the
+        # segmentation mask.  We do NOT use the returned severity_result for
+        # the response; we pull those numbers from the DB instead.
         try:
-            preprocessed    = model_loader.preprocess_image(original_image)
-            predictions     = model_loader.predict(preprocessed)
-            severity_result = model_loader.classify_severity(predictions)
+            preprocessed = model_loader.preprocess_image(original_image)
+            predictions  = model_loader.predict(preprocessed)
         except ImportError as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=503)
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-        affected_pct = float(severity_result.get('affected_percentage', 0))
-        max_prob     = float(severity_result.get('max_probability', 0))
-        mean_prob    = float(severity_result.get('mean_probability', 0))
+        # ✅ Use stored DB values so confidence always matches the Results tab.
+        severity_result = _severity_result_from_db(diagnosis)
+
         has_caries, adaptive_affected = _adaptive_has_caries(severity_result, predictions)
 
         model = model_loader.load_model()
@@ -133,7 +170,7 @@ def explain_diagnosis(request, diagnosis_id):
                 original_image=original_image,
                 preprocessed_image=preprocessed,
                 segmentation_mask=predictions,
-                severity_result=severity_result,
+                severity_result=severity_result,   # ← DB values, not re-inferred
             )
         except ImportError as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=503)
@@ -174,11 +211,12 @@ def explain_diagnosis(request, diagnosis_id):
             'success':             True,
             'diagnosis_id':        diagnosis_id,
             'explanation_url':     explanation_url,
-            'severity':            severity_result.get('severity'),
-            'confidence':          float(severity_result.get('confidence', 0)),
+            # ✅ All numeric fields sourced from DB — always consistent with Results tab
+            'severity':            severity_result['severity'],
+            'confidence':          severity_result['confidence'],
             'affected_percentage': adaptive_affected,
-            'mean_probability':    mean_prob,
-            'max_probability':     max_prob,
+            'mean_probability':    severity_result['mean_probability'],
+            'max_probability':     severity_result['max_probability'],
             'has_caries':          bool(has_caries),
             'techniques_used': [
                 'Segmentation Heatmap',
@@ -200,7 +238,6 @@ def explain_diagnosis(request, diagnosis_id):
             status=500)
 
 
-
 def quick_xai_overlay(request, diagnosis_id):
     try:
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
@@ -210,13 +247,14 @@ def quick_xai_overlay(request, diagnosis_id):
             return JsonResponse({"success": False, "error": output_dir_or_error}, status=500)
         output_dir = output_dir_or_error
 
-        preprocessed    = model_loader.preprocess_image(original_image)
-        predictions     = model_loader.predict(preprocessed)
-        severity_result = model_loader.classify_severity(predictions)
+        preprocessed = model_loader.preprocess_image(original_image)
+        predictions  = model_loader.predict(preprocessed)
 
+        # ✅ Use stored DB values
+        severity_result             = _severity_result_from_db(diagnosis)
         has_caries, adaptive_affected = _adaptive_has_caries(severity_result, predictions)
 
-        xai     = XAIVisualizer(model_loader.load_model())
+        xai        = XAIVisualizer(model_loader.load_model())
         overlay, _ = xai.visualize_segmentation_overlay(original_image, predictions)
 
         output_filename = f'xai_quick_{diagnosis_id}.png'
@@ -254,7 +292,6 @@ def quick_xai_overlay(request, diagnosis_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-
 def get_gradcam(request, diagnosis_id):
     try:
         diagnosis = DiagnosisResult.objects.get(id=diagnosis_id)
@@ -264,10 +301,11 @@ def get_gradcam(request, diagnosis_id):
             return JsonResponse({"success": False, "error": output_dir_or_error}, status=500)
         output_dir = output_dir_or_error
 
-        preprocessed    = model_loader.preprocess_image(original_image)
-        predictions     = model_loader.predict(preprocessed)
-        severity_result = model_loader.classify_severity(predictions)
+        preprocessed = model_loader.preprocess_image(original_image)
+        predictions  = model_loader.predict(preprocessed)
 
+        # ✅ Use stored DB values
+        severity_result             = _severity_result_from_db(diagnosis)
         has_caries, adaptive_affected = _adaptive_has_caries(severity_result, predictions)
 
         xai             = XAIVisualizer(model_loader.load_model())
@@ -296,10 +334,17 @@ def get_gradcam(request, diagnosis_id):
             'success':             True,
             'diagnosis_id':        diagnosis_id,
             'gradcam_url':         gradcam_url,
+            # ✅ Consistent with Results tab
+            'severity':            severity_result['severity'],
+            'confidence':          severity_result['confidence'],
             'has_caries':          bool(has_caries),
             'affected_percentage': adaptive_affected,
             'description':         description,
         })
 
+    except DiagnosisResult.DoesNotExist:
+        return JsonResponse(
+            {'success': False, 'error': f'Diagnosis with id {diagnosis_id} not found'},
+            status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)    
